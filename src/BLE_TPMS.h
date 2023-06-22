@@ -27,6 +27,7 @@ private:
   int _tire_id;
   float _temp_c;
   float _pressure_kpa;
+  float _prev_pressure_kpa = 0;
   float _battery_percent;
   bool _updated = false;
 public:
@@ -45,6 +46,7 @@ public:
   float batteryV();
   void updated(bool);
   bool updated();
+  String macaddress();
 };
 
 

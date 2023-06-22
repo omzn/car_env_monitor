@@ -13,7 +13,7 @@
 #define PIN_LCD_CLK  (18)
 #define PIN_LCD_DC   (26)
 #define PIN_LCD0_CS  (16)
-//#define PIN_LCD0_CS  (19)
+//#define PIN_LCD0_CS  (32)
 #define PIN_LCD0_RST  (5)
 #define PIN_LCD1_CS  (17)
 //#define PIN_LCD1_CS  (4)

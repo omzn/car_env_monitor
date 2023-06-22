@@ -61,7 +61,7 @@ float BLEtpms::temp() {
 }
 
 void BLEtpms::pressure_raw(int p) {
-  _pressure_kpa = ((float)p / 1000.0) + PRESSURE_CALIB;   
+  _pressure_kpa = ((float)p / 1000.0) + PRESSURE_CALIB; 
 }
 
 float BLEtpms::pressure() {
@@ -85,4 +85,35 @@ void BLEtpms::updated(bool b) {
 
 bool BLEtpms::updated() {
   return _updated;
+}
+
+String BLEtpms::macaddress() {
+  uint32_t vendid;
+  uint32_t addr;
+  char addr_str[20];
+  switch (_tire_id) {
+    case TIRE_FL:
+      vendid = BLETPMS_VenderId_FL;
+      addr = BLETPMS_Tire_FL;
+      break;
+    case TIRE_RL:
+      vendid = BLETPMS_VenderId_RL;
+      addr = BLETPMS_Tire_RL;
+      break;
+    case TIRE_FR:
+      vendid = BLETPMS_VenderId_FR;
+      addr = BLETPMS_Tire_FR;
+      break;
+    case TIRE_RR:
+      vendid = BLETPMS_VenderId_RR;
+      addr = BLETPMS_Tire_RR;
+      break;
+    default:
+      addr = 0;
+  }
+  sprintf(addr_str,"%02x:%02x:%02x:%02x:%02x:%02x",
+    vendid >> 16 & 0xff,vendid >> 8 & 0xff,vendid & 0xff,
+    addr >> 16 & 0xff,addr >>  8 & 0xff,addr & 0xff );
+
+  return String(addr_str);
 }
