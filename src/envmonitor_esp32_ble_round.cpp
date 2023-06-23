@@ -684,8 +684,8 @@ void temperatureGraphBox(LGFX_Sprite *img, int x, int y) {
   for (int i = 0; i < SENSOR_HIST; i++) {
     long t = temperature_hist[(temperature_hist_p + i) % SENSOR_HIST] * 10;
     if (t != -1000 * 10) {
-      img->drawRect(15 + pos, height - map(t, imin * 10, imax * 10, 0, height),
-                    1, map(t, imin * 10, imax * 10, 0, height), TEMP_COLOR(t));
+      img->drawGradientVLine(15 + pos, (height - map(t, imin * 10, imax * 10, 0, height)),
+                    map(t, imin * 10, imax * 10, 0, height), TEMP_COLOR(t), TFT_BLACK);
       pos++;
     }
   }
@@ -701,9 +701,9 @@ void temperatureGraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawString(String(imin), img->width() - img->textWidth(str) - 5,
                   img->height() - img->fontHeight());
 
-  img->drawLine(10, 0, width - 50, 0, TFT_DARKGRAY);
-  img->drawLine(10, height - 1, width - 50, height - 1, TFT_DARKGRAY);
-  img->drawLine(10, height / 2, width - 50, height / 2, TFT_DARKGRAY);
+  img->drawLine(10, 0, width - 50, 0, TFT_GRAY64);
+  img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
+  img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
   img->pushSprite(x, y, TFT_TRANSPARENT);
 }
@@ -730,8 +730,8 @@ void humidityGraphBox(LGFX_Sprite *img, int x, int y) {
   for (int i = 0; i < SENSOR_HIST; i++) {
     long t = humidity_hist[(humidity_hist_p + i) % SENSOR_HIST] * 10;
     if (t != 0) {
-      img->drawRect(15 + pos, height - map(t, imin * 10, imax * 10, 0, height),
-                    1, map(t, imin * 10, imax * 10, 0, height), HUMID_COLOR(t));
+      img->drawGradientVLine(15 + pos, height - map(t, imin * 10, imax * 10, 0, height),
+                    map(t, imin * 10, imax * 10, 0, height),HUMID_COLOR(t),TFT_BLACK);
       pos++;
     }
   }
@@ -747,9 +747,9 @@ void humidityGraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawString(String(imin), img->width() - img->textWidth(str) - 5,
                   img->height() - img->fontHeight());
 
-  img->drawLine(10, 0, width - 50, 0, TFT_DARKGRAY);
-  img->drawLine(10, height - 1, width - 50, height - 1, TFT_DARKGRAY);
-  img->drawLine(10, height / 2, width - 50, height / 2, TFT_DARKGRAY);
+  img->drawLine(10, 0, width - 50, 0, TFT_GRAY64);
+  img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
+  img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
   img->pushSprite(x, y, TFT_TRANSPARENT);
 }
@@ -776,8 +776,8 @@ void pressureGraphBox(LGFX_Sprite *img, int x, int y) {
   for (int i = 0; i < SENSOR_HIST; i++) {
     long t = (long)pressure_hist[(pressure_hist_p + i) % SENSOR_HIST];
     if (t != 0) {
-      img->drawRect(15 + pos, height - map(t, imin, imax, 0, height), 1,
-                    map(t, imin, imax, 0, height), PRESS_COLOR(t));
+      img->drawGradientVLine(15 + pos, height - map(t, imin, imax, 0, height), 
+                    map(t, imin, imax, 0, height),  PRESS_COLOR(t),TFT_BLACK);
       pos++;
     }
   }
@@ -793,9 +793,9 @@ void pressureGraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawString(String(imin), img->width() - img->textWidth(str) - 5,
                   img->height() - img->fontHeight());
 
-  img->drawLine(10, 0, width - 50, 0, TFT_DARKGRAY);
-  img->drawLine(10, height - 1, width - 50, height - 1, TFT_DARKGRAY);
-  img->drawLine(10, height / 2, width - 50, height / 2, TFT_DARKGRAY);
+  img->drawLine(10, 0, width - 50, 0, TFT_GRAY64);
+  img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
+  img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
   img->pushSprite(x, y, TFT_TRANSPARENT);
 }
@@ -822,8 +822,8 @@ void co2GraphBox(LGFX_Sprite *img, int x, int y) {
   for (int i = 0; i < SENSOR_HIST; i++) {
     long t = (long)co2_hist[(co2_hist_p + i) % SENSOR_HIST];
     if (t != 0) {
-      img->drawRect(15 + pos, height - map(t, imin, imax, 0, height), 1,
-                    map(t, imin, imax, 0, height), CO2_COLOR(t));
+      img->drawGradientVLine(15 + pos, height - map(t, imin, imax, 0, height),
+                    map(t, imin, imax, 0, height),  CO2_COLOR(t), TFT_BLACK);
       pos++;
     }
   }
@@ -839,9 +839,9 @@ void co2GraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawString(String(imin), img->width() - img->textWidth(str) - 5,
                   img->height() - img->fontHeight());
 
-  img->drawLine(10, 0, width - 50, 0, TFT_DARKGRAY);
-  img->drawLine(10, height - 1, width - 50, height - 1, TFT_DARKGRAY);
-  img->drawLine(10, height / 2, width - 50, height / 2, TFT_DARKGRAY);
+  img->drawLine(10, 0, width - 50, 0, TFT_GRAY64);
+  img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
+  img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
   img->pushSprite(&tft0, x, y, TFT_TRANSPARENT);
 }
