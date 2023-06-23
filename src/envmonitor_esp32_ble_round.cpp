@@ -73,19 +73,14 @@
 #define HUMID_DEG(v) \
   ((90 + constrain(map(v, HUMID_MIN, HUMID_MAX, 45, 315), 45, 315)) % 360)
 
-#define TPRESS_DEG_UP(v) \
-  ((90 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 120, 240), 120, 240)) % 360)
-#define TPRESS_DEG_DOWN(v) \
-  ((constrain(map(v, TPRESS_MIN, TPRESS_MAX, 150, 30), 30, 150)) % 360)
-
 #define TPRESS_DEG_L_UP(v) \
-  ((180 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 30, 80), 30, 80)) % 360)
+  ((180 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 25, 85), 25, 85)) % 360)
 #define TPRESS_DEG_R_UP(v) \
-  ((270 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 60, 10), 10, 60)) % 360)
+  ((270 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 65, 5), 5, 65)) % 360)
 #define TPRESS_DEG_L_DOWN(v) \
-  ((90 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 60, 10), 10, 60)) % 360)
+  ((90 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 65, 5), 5, 65)) % 360)
 #define TPRESS_DEG_R_DOWN(v) \
-  ((0 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 30, 80), 30, 80)) % 360)
+  ((0 + constrain(map(v, TPRESS_MIN, TPRESS_MAX, 25, 85), 25, 85)) % 360)
 
 #define CO2_COLOR(v) \
   (v < CO2_1ST       \
@@ -249,7 +244,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     //    Serial.printf("Found %s with RSSI %d \n", //millis() - lastAdv,
     //     advertisedDevice->getAddress().toString().c_str(),
     //     advertisedDevice->getRSSI());
-    Serial.printf("Advertised Device: %s \n RSSI: %d \n", advertisedDevice->toString().c_str(), advertisedDevice->getRSSI());
+    //Serial.printf("Advertised Device: %s \n RSSI: %d \n", advertisedDevice->toString().c_str(), advertisedDevice->getRSSI());
     int tire = -1;
     if (advertisedDevice->haveManufacturerData() == true) {
       std::string data = advertisedDevice->getManufacturerData();
@@ -344,7 +339,7 @@ void tpmsValueBox(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   //  img->setTextColor(TEMP_COLOR(temp * 10));
   img->setTextColor(TFT_WHITE);
   if (tp->pressure() > 0) {
-    String str = format_digit((tp->pressure() / 100)+0.5, 2, 1);
+    String str = format_digit((tp->pressure() / 100.0) + 0.05, 2, 1); // 小数点第2位を四捨五入
     String sint = str.substring(0, str.length() - 1);
     String sdecimal = str.substring(str.length() - 1);
     FONT_SANS24_IMG;
@@ -373,10 +368,6 @@ void tpmsViewLeftUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   img->fillSprite(TFT_TRANSPARENT);
   FONT_SANS_IMG;
   img->setTextColor(TFT_SILVER);
-  //  img->drawString(String(TPRESS_MIN), 10, 70);
-  //  img->drawString(String(TPRESS_2ND), 105, 25);
-  //  img->drawString(String(TPRESS_MAX), 200, 70);
-  //  drawBmp(img, (unsigned char *)icons[2], 119 - 32, 239 - 64, 64, 64);
   int inc = ((TPRESS_MAX - TPRESS_MIN) / 10);
   for (int i = TPRESS_MIN; i < TPRESS_MAX; i += inc) {
     if (tp->pressure() >= i && tp->pressure() < i + inc) {
@@ -389,8 +380,6 @@ void tpmsViewLeftUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
                    (TPRESS_DEG_L_UP(i + inc) - 3) % 360, TFT_DARKGRAY);
       img->fillArc(119, 119, 75, 110, TPRESS_DEG_L_UP(i) + 2,
                    (TPRESS_DEG_L_UP(i + inc) - 3) % 360, TFT_WHITE);
-      // img->fillArc(119, 119, 95, 110, TPRESS_DEG_L_UP(i) + 2,
-      // (TPRESS_DEG_L_UP(i + inc) - 4) % 360, TFT_RED);
       img->drawArc(119, 119, 103, 118, TPRESS_DEG_L_UP(i),
                    (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_WHITE);
     } else {
@@ -417,10 +406,6 @@ void tpmsViewLeftDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   img->fillSprite(TFT_TRANSPARENT);
   FONT_SANS_IMG;
   img->setTextColor(TFT_SILVER);
-  //  img->drawString(String(TPRESS_MIN), 10, 70);
-  //  img->drawString(String(TPRESS_2ND), 105, 25);
-  //  img->drawString(String(TPRESS_MAX), 200, 70);
-  //  drawBmp(img, (unsigned char *)icons[2], 119 - 32, 239 - 64, 64, 64);
   int inc = ((TPRESS_MAX - TPRESS_MIN) / 10);
   for (int i = TPRESS_MIN; i < TPRESS_MAX; i += inc) {
     if (tp->pressure() >= i && tp->pressure() < i + inc) {
@@ -460,10 +445,6 @@ void tpmsViewRightUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   img->fillSprite(TFT_TRANSPARENT);
   FONT_SANS_IMG;
   img->setTextColor(TFT_SILVER);
-  //  img->drawString(String(TPRESS_MIN), 10, 70);
-  //  img->drawString(String(TPRESS_2ND), 105, 25);
-  //  img->drawString(String(TPRESS_MAX), 200, 70);
-  //  drawBmp(img, (unsigned char *)icons[2], 119 - 32, 239 - 64, 64, 64);
   int inc = ((TPRESS_MAX - TPRESS_MIN) / 10);
   for (int i = TPRESS_MIN; i < TPRESS_MAX; i += inc) {
     if (tp->pressure() >= i && tp->pressure() < i + inc) {
@@ -475,8 +456,6 @@ void tpmsViewRightUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
                    TPRESS_DEG_R_UP(i) - 1, TFT_DARKGRAY);
       img->fillArc(0, 119, 75, 110, (TPRESS_DEG_R_UP(i + inc) + 3) % 360,
                    TPRESS_DEG_R_UP(i) - 2, TFT_WHITE);
-      // img->fillArc(119, 119, 95, 110, TPRESS_DEG_L_UP(i) + 2,
-      // (TPRESS_DEG_L_UP(i + inc) - 4) % 360, TFT_RED);
       img->drawArc(0, 119, 103, 118, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
                    TPRESS_DEG_R_UP(i), TFT_WHITE);
     } else {
@@ -511,12 +490,11 @@ void tpmsViewRightDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
       img->fillArc(0, 0, 70, 101, TPRESS_DEG_R_DOWN(i),
                    (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360,
                    img->color888(64, 64, 64));
+      // hand
       img->fillArc(0, 0, 75, 101, TPRESS_DEG_R_DOWN(i) + 1,
                    (TPRESS_DEG_R_DOWN(i + inc) - 3) % 360, TFT_DARKGRAY);
       img->fillArc(0, 0, 75, 110, TPRESS_DEG_R_DOWN(i) + 2,
                    (TPRESS_DEG_R_DOWN(i + inc) - 3) % 360, TFT_WHITE);
-      // img->fillArc(119, 119, 95, 110, TPRESS_DEG_L_UP(i) + 2,
-      // (TPRESS_DEG_L_UP(i + inc) - 4) % 360, TFT_RED);
       img->drawArc(0, 0, 103, 118, TPRESS_DEG_R_DOWN(i),
                    (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_WHITE);
     } else {
@@ -562,20 +540,6 @@ void temperatureView(LGFX_Device *img, int x, int y, float temp) {
                    (TEMP_DEG(i + inc) - 2) % 360, TFT_RED);
       img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, TEMP_DEG(i),
                    (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR4(i));
-      //      img->fillArc(119, 119,  70, 101, TEMP_DEG(i), (TEMP_DEG(i + inc) -
-      //      2) % 360, img->color888(64,64,64)); img->fillArc(119, 119,  75,
-      //      101, TEMP_DEG(i)+1, (TEMP_DEG(i + inc) - 3) % 360, TFT_DARKGRAY);
-      //      img->fillArc(119, 119,  75, 110, TEMP_DEG(i)+2, (TEMP_DEG(i + inc)
-      //      - 4) % 360, TFT_WHITE);
-      // hand
-      /*
-      img->fillArc(119, 119, 75, 101, TEMP_DEG(i) + 1,
-                   (TEMP_DEG(i + inc) - 3) % 360, TFT_DARKGRAY);
-      img->fillArc(119, 119, 75, 110, TEMP_DEG(i) + 2,
-                   (TEMP_DEG(i + inc) - 4) % 360, TFT_WHITE);
-      img->fillArc(119, 119, 100, 110, TEMP_DEG(i) + 2,
-                   (TEMP_DEG(i + inc) - 4) % 360, TFT_RED);
-      */    
     } else if (temp * 10 >= i) {
       img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, TEMP_DEG(i),
                    (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR(i));
@@ -627,15 +591,6 @@ void humidityView(LGFX_Device *img, int x, int y, float humid) {
                    (HUMID_DEG(i + inc) - 2) % 360, TFT_RED);
       img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, HUMID_DEG(i),
                    (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR4(i));
-      //img->fillArc(119, 119, 103, 118, HUMID_DEG(i),
-      //             (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR(i));
-      //      img->fillArc(119, 119,  70, 101, HUMID_DEG(i), (HUMID_DEG(i + inc)
-      //      - 2) % 360, img->color888(64,64,64)); img->fillArc(119, 119,  75,
-      //      101, HUMID_DEG(i)+1, (HUMID_DEG(i + inc) - 3) % 360,
-      //      TFT_DARKGRAY); img->fillArc(119, 119,  75, 110, HUMID_DEG(i)+2,
-      //      (HUMID_DEG(i + inc) - 4) % 360, TFT_WHITE);
-      //img->drawArc(119, 119, 103, 118, HUMID_DEG(i),
-      //             (HUMID_DEG(i + inc) - 2) % 360, TFT_LIGHTGRAY);
     } else if (humid * 10 >= i) {
       img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, HUMID_DEG(i),
                    (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR(i));
@@ -1178,11 +1133,11 @@ void setup() {
   tft0.setRotation(3);
   tft1.setRotation(1);
 
-  img120x120.setColorDepth(8);
+  img120x120.setColorDepth(16);
   img120x120.createSprite(120,120);
   img140x60.setColorDepth(8);
   img140x60.createSprite(140,60);
-  img160x72.setColorDepth(8);
+  img160x72.setColorDepth(16);
   img160x72.createSprite(160,72);
 
   oled1.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -1252,8 +1207,6 @@ void loop() {
     co2 = sensorCO2.getCO2();
     temp1 = sensorCO2.getTemperature();
     delay(100);
-    //    sensorTemp.requestTemperatures();
-    //    temp3 = sensorTemp.getTempCByIndex(0);
     if (seq > 3) {
       stable = 1;
     } else if (!stable) {
@@ -1362,10 +1315,4 @@ void loop() {
   eyes.randomBlinking(0);
   eyes.move();
   eyes.blink();
-  // eyes.update();
-  /*  Serial.print("millis:");
-    Serial.println(millis());
-    Serial.print("perv_millis:");
-    Serial.println(prev_millis);
-    */
 }
