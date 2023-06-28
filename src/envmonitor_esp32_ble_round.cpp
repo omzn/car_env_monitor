@@ -1,6 +1,6 @@
 #include <SPI.h>
-#include <Wire.h>
 #include <WiFi.h>
+#include <Wire.h>
 // #include <OneWire.h>
 
 #include <Adafruit_BMP280.h>
@@ -15,6 +15,8 @@
 #include "BLE_TPMS.h"
 #include "DHT12.h"
 #include "LGFX_GC9A01.h"
+#include "MazdaTypeBold18pt.h"
+#include "MazdaTypeBold24pt.h"
 #include "aquatan_eye.h"
 #include "bitmaps.h"
 #include "debugmacros.h"
@@ -27,11 +29,17 @@
 #define PIN_TX2 GPIO_NUM_17
 #define PIN_RX2 GPIO_NUM_16
 
-#define FONT_SANS24_IMG img->setFont(&fonts::FreeSans24pt7b)
-#define FONT_SANS18_IMG img->setFont(&fonts::FreeSans18pt7b)
+// #define FONT_SANS24_IMG img->setFont(&fonts::FreeSans24pt7b)
+#define FONT_SANS24_IMG img->setFont(&Mazda_Type_Bold24pt7b)
+// #define FONT_SANS18_IMG img->setFont(&fonts::FreeSans18pt7b)
+#define FONT_SANS18_IMG img->setFont(&Mazda_Type_Bold18pt7b)
 #define FONT_SANS_IMG img->setFont(&fonts::FreeSans9pt7b)
 
-#define TFT_GRAY64 img->color888(64,64,64)
+#define TFT_GRAY96 img->color888(96, 96, 96)
+#define TFT_GRAY64 img->color888(64, 64, 64)
+#define TFT_GRAY48 img->color888(48, 48, 48)
+#define TFT_GRAY32 img->color888(32, 32, 32)
+#define TFT_GRAY16 img->color888(16, 16, 16)
 
 #define TPRESS_MIN (200)
 #define TPRESS_1ST (225)
@@ -86,22 +94,26 @@
   (v < CO2_1ST       \
        ? TFT_CYAN    \
        : (v < CO2_2ND ? TFT_GREEN : (v < CO2_3RD ? TFT_YELLOW : TFT_RED)))
-#define CO2_COLOR1(v) \
-  (v < CO2_1ST       \
-       ? img->color888(0,191,191)    \
-       : (v < CO2_2ND ? img->color888(0,191,0) : (v < CO2_3RD ? img->color888(191,191,0) : img->color888(191,0,0))))
-#define CO2_COLOR2(v) \
-  (v < CO2_1ST       \
-       ? img->color888(0,127,127)    \
-       : (v < CO2_2ND ? img->color888(0,127,0) : (v < CO2_3RD ? img->color888(127,127,0) : img->color888(127,0,0))))
-#define CO2_COLOR3(v) \
-  (v < CO2_1ST       \
-       ? img->color888(0,63,63)    \
-       : (v < CO2_2ND ? img->color888(0,63,0) : (v < CO2_3RD ? img->color888(63,63,0) : img->color888(63,0,0))))
-#define CO2_COLOR4(v) \
-  (v < CO2_1ST       \
-       ? img->color888(0,32,32)    \
-       : (v < CO2_2ND ? img->color888(0,32,0) : (v < CO2_3RD ? img->color888(32,32,0) : img->color888(32,0,0))))
+#define CO2_COLOR1(v)                                                     \
+  (v < CO2_1ST ? img->color888(0, 191, 191)                               \
+               : (v < CO2_2ND ? img->color888(0, 191, 0)                  \
+                              : (v < CO2_3RD ? img->color888(191, 191, 0) \
+                                             : img->color888(191, 0, 0))))
+#define CO2_COLOR2(v)                                                     \
+  (v < CO2_1ST ? img->color888(0, 127, 127)                               \
+               : (v < CO2_2ND ? img->color888(0, 127, 0)                  \
+                              : (v < CO2_3RD ? img->color888(127, 127, 0) \
+                                             : img->color888(127, 0, 0))))
+#define CO2_COLOR3(v)                                                   \
+  (v < CO2_1ST ? img->color888(0, 63, 63)                               \
+               : (v < CO2_2ND ? img->color888(0, 63, 0)                 \
+                              : (v < CO2_3RD ? img->color888(63, 63, 0) \
+                                             : img->color888(63, 0, 0))))
+#define CO2_COLOR4(v)                                                   \
+  (v < CO2_1ST ? img->color888(0, 32, 32)                               \
+               : (v < CO2_2ND ? img->color888(0, 32, 0)                 \
+                              : (v < CO2_3RD ? img->color888(32, 32, 0) \
+                                             : img->color888(32, 0, 0))))
 
 #define TEMP_COLOR(v)                     \
   (v < TEMP_1ST                           \
@@ -110,80 +122,129 @@
               ? TFT_CYAN                  \
               : (v < TEMP_3RD ? TFT_GREEN \
                               : (v < TEMP_4TH ? TFT_YELLOW : TFT_RED))))
-#define TEMP_COLOR1(v)                     \
-  (v < TEMP_1ST                           \
-       ? img->color888(0,0,191)                         \
-       : (v < TEMP_2ND                    \
-              ? img->color888(0,191,191)                  \
-              : (v < TEMP_3RD ? img->color888(0,191,0) \
-                              : (v < TEMP_4TH ? img->color888(191,191,0) : img->color888(191,0,0)))))
-#define TEMP_COLOR2(v)                     \
-  (v < TEMP_1ST                           \
-       ? img->color888(0,0,127)                         \
-       : (v < TEMP_2ND                    \
-              ? img->color888(0,127,127)                  \
-              : (v < TEMP_3RD ? img->color888(0,127,0) \
-                              : (v < TEMP_4TH ? img->color888(127,127,0) : img->color888(127,0,0)))))
-#define TEMP_COLOR3(v)                     \
-  (v < TEMP_1ST                           \
-       ? img->color888(0,0,63)                         \
-       : (v < TEMP_2ND                    \
-              ? img->color888(0,63,63)                  \
-              : (v < TEMP_3RD ? img->color888(0,63,0) \
-                              : (v < TEMP_4TH ? img->color888(63,63,0) : img->color888(63,0,0)))))
-#define TEMP_COLOR4(v)                     \
-  (v < TEMP_1ST                           \
-       ? img->color888(0,0,31)                         \
-       : (v < TEMP_2ND                    \
-              ? img->color888(0,31,31)                  \
-              : (v < TEMP_3RD ? img->color888(0,31,0) \
-                              : (v < TEMP_4TH ? img->color888(31,31,0) : img->color888(31,0,0)))))
+#define TEMP_COLOR1(v)                                                     \
+  (v < TEMP_1ST                                                            \
+       ? img->color888(0, 0, 191)                                          \
+       : (v < TEMP_2ND                                                     \
+              ? img->color888(0, 191, 191)                                 \
+              : (v < TEMP_3RD ? img->color888(0, 191, 0)                   \
+                              : (v < TEMP_4TH ? img->color888(191, 191, 0) \
+                                              : img->color888(191, 0, 0)))))
+#define TEMP_COLOR2(v)                                                     \
+  (v < TEMP_1ST                                                            \
+       ? img->color888(0, 0, 127)                                          \
+       : (v < TEMP_2ND                                                     \
+              ? img->color888(0, 127, 127)                                 \
+              : (v < TEMP_3RD ? img->color888(0, 127, 0)                   \
+                              : (v < TEMP_4TH ? img->color888(127, 127, 0) \
+                                              : img->color888(127, 0, 0)))))
+#define TEMP_COLOR3(v)                                                   \
+  (v < TEMP_1ST                                                          \
+       ? img->color888(0, 0, 63)                                         \
+       : (v < TEMP_2ND                                                   \
+              ? img->color888(0, 63, 63)                                 \
+              : (v < TEMP_3RD ? img->color888(0, 63, 0)                  \
+                              : (v < TEMP_4TH ? img->color888(63, 63, 0) \
+                                              : img->color888(63, 0, 0)))))
+#define TEMP_COLOR4(v)                                                   \
+  (v < TEMP_1ST                                                          \
+       ? img->color888(0, 0, 31)                                         \
+       : (v < TEMP_2ND                                                   \
+              ? img->color888(0, 31, 31)                                 \
+              : (v < TEMP_3RD ? img->color888(0, 31, 0)                  \
+                              : (v < TEMP_4TH ? img->color888(31, 31, 0) \
+                                              : img->color888(31, 0, 0)))))
 #define PRESS_COLOR(v)                         \
   (v < PRESS_1ST ? TFT_RED                     \
                  : (v < PRESS_2ND ? TFT_YELLOW \
                                   : (v < PRESS_3RD ? TFT_GREEN : TFT_CYAN)))
-#define PRESS_COLOR1(v)                         \
-  (v < PRESS_1ST ? img->color888(191,0,0)                     \
-                 : (v < PRESS_2ND ? img->color888(191,191,0) \
-                                  : (v < PRESS_3RD ? img->color888(0,191,0) : img->color888(0,191,191))))
-#define PRESS_COLOR2(v)                         \
-  (v < PRESS_1ST ? img->color888(127,0,0)                     \
-                 : (v < PRESS_2ND ? img->color888(127,127,0) \
-                                  : (v < PRESS_3RD ? img->color888(0,127,0) : img->color888(0,127,127))))
-#define PRESS_COLOR3(v)                         \
-  (v < PRESS_1ST ? img->color888(63,0,0)                     \
-                 : (v < PRESS_2ND ? img->color888(63,63,0) \
-                                  : (v < PRESS_3RD ? img->color888(0,63,0) : img->color888(0,63,63))))
-#define PRESS_COLOR4(v)                         \
-  (v < PRESS_1ST ? img->color888(32,0,0)                     \
-                 : (v < PRESS_2ND ? img->color888(32,32,0) \
-                                  : (v < PRESS_3RD ? img->color888(0,32,0) : img->color888(0,32,32))))
+#define PRESS_COLOR1(v)                                             \
+  (v < PRESS_1ST                                                    \
+       ? img->color888(191, 0, 0)                                   \
+       : (v < PRESS_2ND ? img->color888(191, 191, 0)                \
+                        : (v < PRESS_3RD ? img->color888(0, 191, 0) \
+                                         : img->color888(0, 191, 191))))
+#define PRESS_COLOR2(v)                                             \
+  (v < PRESS_1ST                                                    \
+       ? img->color888(127, 0, 0)                                   \
+       : (v < PRESS_2ND ? img->color888(127, 127, 0)                \
+                        : (v < PRESS_3RD ? img->color888(0, 127, 0) \
+                                         : img->color888(0, 127, 127))))
+#define PRESS_COLOR3(v)                                            \
+  (v < PRESS_1ST                                                   \
+       ? img->color888(63, 0, 0)                                   \
+       : (v < PRESS_2ND ? img->color888(63, 63, 0)                 \
+                        : (v < PRESS_3RD ? img->color888(0, 63, 0) \
+                                         : img->color888(0, 63, 63))))
+#define PRESS_COLOR4(v)                                            \
+  (v < PRESS_1ST                                                   \
+       ? img->color888(32, 0, 0)                                   \
+       : (v < PRESS_2ND ? img->color888(32, 32, 0)                 \
+                        : (v < PRESS_3RD ? img->color888(0, 32, 0) \
+                                         : img->color888(0, 32, 32))))
 
 #define HUMID_COLOR(v)                         \
   (v < HUMID_1ST ? TFT_RED                     \
                  : (v < HUMID_2ND ? TFT_YELLOW \
                                   : (v < HUMID_3RD ? TFT_GREEN : TFT_CYAN)))
-#define HUMID_COLOR1(v)                         \
-  (v < HUMID_1ST ? img->color888(191,0,0)                     \
-                 : (v < HUMID_2ND ? img->color888(191,191,0) \
-                                  : (v < HUMID_3RD ? img->color888(0,191,0) : img->color888(0,191,191))))
-#define HUMID_COLOR2(v)                         \
-  (v < HUMID_1ST ? img->color888(127,0,0)                     \
-                 : (v < HUMID_2ND ? img->color888(127,127,0) \
-                                  : (v < HUMID_3RD ? img->color888(0,127,0) : img->color888(0,127,127))))
-#define HUMID_COLOR3(v)                         \
-  (v < HUMID_1ST ? img->color888(63,0,0)                     \
-                 : (v < HUMID_2ND ? img->color888(63,63,0) \
-                                  : (v < HUMID_3RD ? img->color888(0,63,0) : img->color888(0,63,63))))
-#define HUMID_COLOR4(v)                         \
-  (v < HUMID_1ST ? img->color888(31,0,0)                     \
-                 : (v < HUMID_2ND ? img->color888(31,31,0) \
-                                  : (v < HUMID_3RD ? img->color888(0,31,0) : img->color888(0,31,31))))
+#define HUMID_COLOR1(v)                                             \
+  (v < HUMID_1ST                                                    \
+       ? img->color888(191, 0, 0)                                   \
+       : (v < HUMID_2ND ? img->color888(191, 191, 0)                \
+                        : (v < HUMID_3RD ? img->color888(0, 191, 0) \
+                                         : img->color888(0, 191, 191))))
+#define HUMID_COLOR2(v)                                             \
+  (v < HUMID_1ST                                                    \
+       ? img->color888(127, 0, 0)                                   \
+       : (v < HUMID_2ND ? img->color888(127, 127, 0)                \
+                        : (v < HUMID_3RD ? img->color888(0, 127, 0) \
+                                         : img->color888(0, 127, 127))))
+#define HUMID_COLOR3(v)                                            \
+  (v < HUMID_1ST                                                   \
+       ? img->color888(63, 0, 0)                                   \
+       : (v < HUMID_2ND ? img->color888(63, 63, 0)                 \
+                        : (v < HUMID_3RD ? img->color888(0, 63, 0) \
+                                         : img->color888(0, 63, 63))))
+#define HUMID_COLOR4(v)                                            \
+  (v < HUMID_1ST                                                   \
+       ? img->color888(31, 0, 0)                                   \
+       : (v < HUMID_2ND ? img->color888(31, 31, 0)                 \
+                        : (v < HUMID_3RD ? img->color888(0, 31, 0) \
+                                         : img->color888(0, 31, 31))))
 
 #define TPRESS_COLOR(v) \
   (v < TPRESS_1ST       \
        ? TFT_GOLD       \
-       : (v < TPRESS_2ND ? TFT_BLUE : (v < TPRESS_3RD ? TFT_BLUE : TFT_GOLD)))
+       : (v < TPRESS_2ND ? TFT_CYAN : (v < TPRESS_3RD ? TFT_CYAN : TFT_GOLD)))
+#define TPRESS_COLOR1(v)                                     \
+  (v < TPRESS_1ST                                            \
+       ? img->color888(191, 215 - 54, 0)                     \
+       : (v < TPRESS_2ND                                     \
+              ? img->color888(0, 191, 191)                   \
+              : (v < TPRESS_3RD ? img->color888(0, 191, 191) \
+                                : img->color888(191, 215 - 54, 0))))
+#define TPRESS_COLOR2(v)                                     \
+  (v < TPRESS_1ST                                            \
+       ? img->color888(127, 215 - 54 - 54, 0)                \
+       : (v < TPRESS_2ND                                     \
+              ? img->color888(0, 127, 127)                   \
+              : (v < TPRESS_3RD ? img->color888(0, 127, 127) \
+                                : img->color888(127, 215 - 54 - 54, 0))))
+#define TPRESS_COLOR3(v)                                   \
+  (v < TPRESS_1ST                                          \
+       ? img->color888(63, 215 - 54 - 54 - 54, 0)          \
+       : (v < TPRESS_2ND                                   \
+              ? img->color888(0, 63, 63)                   \
+              : (v < TPRESS_3RD ? img->color888(0, 63, 63) \
+                                : img->color888(127, 215 - 54 - 54 - 54, 0))))
+#define TPRESS_COLOR4(v)                               \
+  (v < TPRESS_1ST                                      \
+       ? img->color888(31, 215 - 54 - 54 - 54 - 27, 0) \
+       : (v < TPRESS_2ND                               \
+              ? img->color888(0, 31, 31)               \
+              : (v < TPRESS_3RD                        \
+                     ? img->color888(0, 31, 31)        \
+                     : img->color888(31, 215 - 54 - 54 - 54 - 27, 0))))
 
 #define SENSOR_HIST (90)
 #define NUM_OF_VIEWS (4)
@@ -244,7 +305,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     //    Serial.printf("Found %s with RSSI %d \n", //millis() - lastAdv,
     //     advertisedDevice->getAddress().toString().c_str(),
     //     advertisedDevice->getRSSI());
-    //Serial.printf("Advertised Device: %s \n RSSI: %d \n", advertisedDevice->toString().c_str(), advertisedDevice->getRSSI());
+    // Serial.printf("Advertised Device: %s \n RSSI: %d \n",
+    // advertisedDevice->toString().c_str(), advertisedDevice->getRSSI());
     int tire = -1;
     if (advertisedDevice->haveManufacturerData() == true) {
       std::string data = advertisedDevice->getManufacturerData();
@@ -339,7 +401,8 @@ void tpmsValueBox(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   //  img->setTextColor(TEMP_COLOR(temp * 10));
   img->setTextColor(TFT_WHITE);
   if (tp->pressure() > 0) {
-    String str = format_digit((tp->pressure() / 100.0) + 0.05, 2, 1); // 小数点第2位を四捨五入
+    String str = format_digit((tp->pressure() / 100.0) + 0.05, 2,
+                              1);  // 小数点第2位を四捨五入
     String sint = str.substring(0, str.length() - 1);
     String sdecimal = str.substring(str.length() - 1);
     FONT_SANS24_IMG;
@@ -371,22 +434,42 @@ void tpmsViewLeftUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   int inc = ((TPRESS_MAX - TPRESS_MIN) / 10);
   for (int i = TPRESS_MIN; i < TPRESS_MAX; i += inc) {
     if (tp->pressure() >= i && tp->pressure() < i + inc) {
-      img->fillArc(119, 119, 103, 118, TPRESS_DEG_L_UP(i),
+      img->fillArc(119, 119, 113, 118, TPRESS_DEG_L_UP(i),
                    (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TPRESS_COLOR(i));
+      img->fillArc(119, 119, 109, 113, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TPRESS_COLOR1(i));
+      img->fillArc(119, 119, 105, 109, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TPRESS_COLOR2(i));
+      img->fillArc(119, 119, 102, 105, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TPRESS_COLOR3(i));
+      img->drawArc(119, 119, 101, 119, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_RED);
+      img->fillArc(119, 119, 100, 102, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TPRESS_COLOR4(i));
+
       img->fillArc(119, 119, 70, 101, TPRESS_DEG_L_UP(i),
-                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360,
-                   img->color888(64, 64, 64));
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_GRAY64);
       img->fillArc(119, 119, 75, 101, TPRESS_DEG_L_UP(i) + 1,
-                   (TPRESS_DEG_L_UP(i + inc) - 3) % 360, TFT_DARKGRAY);
+                   (TPRESS_DEG_L_UP(i + inc) - 3) % 360, TFT_GRAY96);
       img->fillArc(119, 119, 75, 110, TPRESS_DEG_L_UP(i) + 2,
                    (TPRESS_DEG_L_UP(i + inc) - 3) % 360, TFT_WHITE);
-      img->drawArc(119, 119, 103, 118, TPRESS_DEG_L_UP(i),
-                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_WHITE);
+
+      //      img->drawArc(119, 119, 103, 118, TPRESS_DEG_L_UP(i),
+      //                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_WHITE);
+
     } else {
-      img->fillArc(119, 119, 103, 118, TPRESS_DEG_L_UP(i),
+      img->fillArc(119, 119, 113, 118, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_GRAY64);
+      img->fillArc(119, 119, 109, 113, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_GRAY48);
+      img->fillArc(119, 119, 105, 109, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_GRAY32);
+      img->fillArc(119, 119, 102, 105, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_GRAY16);
+      img->drawArc(119, 119, 101, 119, TPRESS_DEG_L_UP(i),
+                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_GRAY64);
+      img->fillArc(119, 119, 100, 102, TPRESS_DEG_L_UP(i),
                    (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_BLACK);
-      img->drawArc(119, 119, 103, 118, TPRESS_DEG_L_UP(i),
-                   (TPRESS_DEG_L_UP(i + inc) - 2) % 360, TFT_DARKGRAY);
     }
   }
   if (tp->pressure() > 0.0) {
@@ -409,23 +492,38 @@ void tpmsViewLeftDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   int inc = ((TPRESS_MAX - TPRESS_MIN) / 10);
   for (int i = TPRESS_MIN; i < TPRESS_MAX; i += inc) {
     if (tp->pressure() >= i && tp->pressure() < i + inc) {
-      img->fillArc(119, 0, 103, 118, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+      img->fillArc(119, 0, 113, 118, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
                    TPRESS_DEG_L_DOWN(i), TPRESS_COLOR(i));
+      img->fillArc(119, 0, 109, 113, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TPRESS_COLOR1(i));
+      img->fillArc(119, 0, 105, 109, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TPRESS_COLOR2(i));
+      img->fillArc(119, 0, 102, 105, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TPRESS_COLOR3(i));
+      img->drawArc(119, 0, 101, 119, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TFT_RED);
+      img->fillArc(119, 0, 100, 102, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TPRESS_COLOR4(i));
+
       img->fillArc(119, 0, 70, 101, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
-                   TPRESS_DEG_L_DOWN(i), img->color888(64, 64, 64));
+                   TPRESS_DEG_L_DOWN(i), TFT_GRAY64);
       img->fillArc(119, 0, 75, 101, (TPRESS_DEG_L_DOWN(i + inc) + 3) % 360,
-                   TPRESS_DEG_L_DOWN(i) - 1, TFT_DARKGRAY);
+                   TPRESS_DEG_L_DOWN(i) - 1, TFT_GRAY96);
       img->fillArc(119, 0, 75, 110, (TPRESS_DEG_L_DOWN(i + inc) + 3) % 360,
                    TPRESS_DEG_L_DOWN(i) - 2, TFT_WHITE);
-      // img->fillArc(119, 119, 95, 110, TPRESS_DEG_L_DOWN(i) + 2,
-      // (TPRESS_DEG_L_DOWN(i + inc) - 4) % 360, TFT_RED);
-      img->drawArc(119, 0, 103, 118, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
-                   TPRESS_DEG_L_DOWN(i), TFT_WHITE);
     } else {
-      img->fillArc(119, 0, 103, 118, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+      img->fillArc(119, 0, 113, 118, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TFT_GRAY64);
+      img->fillArc(119, 0, 109, 113, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TFT_GRAY48);
+      img->fillArc(119, 0, 105, 109, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TFT_GRAY32);
+      img->fillArc(119, 0, 102, 105, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TFT_GRAY16);
+      img->drawArc(119, 0, 101, 119, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
+                   TPRESS_DEG_L_DOWN(i), TFT_GRAY64);
+      img->fillArc(119, 0, 100, 102, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
                    TPRESS_DEG_L_DOWN(i), TFT_BLACK);
-      img->drawArc(119, 0, 103, 118, (TPRESS_DEG_L_DOWN(i + inc) + 2) % 360,
-                   TPRESS_DEG_L_DOWN(i), TFT_DARKGRAY);
     }
   }
   if (tp->pressure() > 0.0) {
@@ -448,21 +546,38 @@ void tpmsViewRightUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   int inc = ((TPRESS_MAX - TPRESS_MIN) / 10);
   for (int i = TPRESS_MIN; i < TPRESS_MAX; i += inc) {
     if (tp->pressure() >= i && tp->pressure() < i + inc) {
-      img->fillArc(0, 119, 103, 118, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+      img->fillArc(0, 119, 113, 118, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
                    TPRESS_DEG_R_UP(i), TPRESS_COLOR(i));
+      img->fillArc(0, 119, 109, 113, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TPRESS_COLOR1(i));
+      img->fillArc(0, 119, 105, 109, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TPRESS_COLOR2(i));
+      img->fillArc(0, 119, 102, 105, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TPRESS_COLOR3(i));
+      img->drawArc(0, 119, 101, 119, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TFT_RED);
+      img->fillArc(0, 119, 100, 102, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TPRESS_COLOR4(i));
+
       img->fillArc(0, 119, 70, 101, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
-                   TPRESS_DEG_R_UP(i), img->color888(64, 64, 64));
+                   TPRESS_DEG_R_UP(i), TFT_GRAY64);
       img->fillArc(0, 119, 75, 101, (TPRESS_DEG_R_UP(i + inc) + 3) % 360,
-                   TPRESS_DEG_R_UP(i) - 1, TFT_DARKGRAY);
+                   TPRESS_DEG_R_UP(i) - 1, TFT_GRAY96);
       img->fillArc(0, 119, 75, 110, (TPRESS_DEG_R_UP(i + inc) + 3) % 360,
                    TPRESS_DEG_R_UP(i) - 2, TFT_WHITE);
-      img->drawArc(0, 119, 103, 118, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
-                   TPRESS_DEG_R_UP(i), TFT_WHITE);
     } else {
-      img->fillArc(0, 119, 103, 118, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+      img->fillArc(0, 119, 113, 118, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TFT_GRAY64);
+      img->fillArc(0, 119, 109, 113, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TFT_GRAY48);
+      img->fillArc(0, 119, 105, 109, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TFT_GRAY32);
+      img->fillArc(0, 119, 102, 105, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TFT_GRAY16);
+      img->drawArc(0, 119, 101, 119, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
+                   TPRESS_DEG_R_UP(i), TFT_GRAY64);
+      img->fillArc(0, 119, 100, 102, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
                    TPRESS_DEG_R_UP(i), TFT_BLACK);
-      img->drawArc(0, 119, 103, 118, (TPRESS_DEG_R_UP(i + inc) + 2) % 360,
-                   TPRESS_DEG_R_UP(i), TFT_DARKGRAY);
     }
   }
   if (tp->pressure() > 0.0) {
@@ -485,23 +600,38 @@ void tpmsViewRightDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
   int inc = ((TPRESS_MAX - TPRESS_MIN) / 10);
   for (int i = TPRESS_MIN; i < TPRESS_MAX; i += inc) {
     if (tp->pressure() >= i && tp->pressure() < i + inc) {
-      img->fillArc(0, 0, 103, 118, TPRESS_DEG_R_DOWN(i),
+      img->fillArc(0, 0, 113, 118, TPRESS_DEG_R_DOWN(i),
                    (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TPRESS_COLOR(i));
+      img->fillArc(0, 0, 109, 113, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TPRESS_COLOR1(i));
+      img->fillArc(0, 0, 105, 109, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TPRESS_COLOR2(i));
+      img->fillArc(0, 0, 102, 105, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TPRESS_COLOR3(i));
+      img->drawArc(0, 0, 101, 119, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_RED);
+      img->fillArc(0, 0, 100, 102, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TPRESS_COLOR4(i));
+
       img->fillArc(0, 0, 70, 101, TPRESS_DEG_R_DOWN(i),
-                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360,
-                   img->color888(64, 64, 64));
-      // hand
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_GRAY64);
       img->fillArc(0, 0, 75, 101, TPRESS_DEG_R_DOWN(i) + 1,
-                   (TPRESS_DEG_R_DOWN(i + inc) - 3) % 360, TFT_DARKGRAY);
+                   (TPRESS_DEG_R_DOWN(i + inc) - 3) % 360, TFT_GRAY96);
       img->fillArc(0, 0, 75, 110, TPRESS_DEG_R_DOWN(i) + 2,
                    (TPRESS_DEG_R_DOWN(i + inc) - 3) % 360, TFT_WHITE);
-      img->drawArc(0, 0, 103, 118, TPRESS_DEG_R_DOWN(i),
-                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_WHITE);
     } else {
-      img->fillArc(0, 0, 103, 118, TPRESS_DEG_R_DOWN(i),
+      img->fillArc(0, 0, 113, 118, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_GRAY64);
+      img->fillArc(0, 0, 109, 113, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_GRAY48);
+      img->fillArc(0, 0, 105, 109, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_GRAY32);
+      img->fillArc(0, 0, 102, 105, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_GRAY16);
+      img->drawArc(0, 0, 101, 119, TPRESS_DEG_R_DOWN(i),
+                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_GRAY64);
+      img->fillArc(0, 0, 100, 102, TPRESS_DEG_R_DOWN(i),
                    (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_BLACK);
-      img->drawArc(0, 0, 103, 118, TPRESS_DEG_R_DOWN(i),
-                   (TPRESS_DEG_R_DOWN(i + inc) - 2) % 360, TFT_DARKGRAY);
     }
   }
   if (tp->pressure() > 0.0) {
@@ -520,49 +650,74 @@ void tpmsViewRightDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
 void temperatureView(LGFX_Device *img, int x, int y, float temp) {
   int count = 0, area = 0;
   img->startWrite();
-  //img120x120.clearDisplay();
+  // img120x120.clearDisplay();
   int inc = ((TEMP_MAX - TEMP_MIN) / 30);
   for (int i = TEMP_MIN; i < TEMP_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
-    if (count == 0 || count == 5 || count==15 || count == 25 ) {
+    if (count == 0 || count == 5 || count == 15 || count == 25) {
       img120x120.fillSprite(TFT_TRANSPARENT);
     }
     if (temp * 10 < i + inc && temp * 10 >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TFT_RED);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_RED);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR4(i));
     } else if (temp * 10 >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TEMP_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TEMP_COLOR4(i));
 
-    } else { 
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 118, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TFT_BLACK);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, TEMP_DEG(i),
-                   (TEMP_DEG(i + inc) - 2) % 360, TFT_BLACK);
+    } else {
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY48);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY32);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY16);
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+                         TFT_BLACK);
     }
-    img120x120.pushSprite(area < 2 ? 0 : 120,  (area > 0 && area < 3) ? 0 : 120,TFT_TRANSPARENT);
+    img120x120.pushSprite(area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+                          TFT_TRANSPARENT);
     count++;
   }
   drawBmp(img, (unsigned char *)icons[0], 119 - 32, 239 - 64, 64, 64);
@@ -575,44 +730,69 @@ void humidityView(LGFX_Device *img, int x, int y, float humid) {
   int inc = ((HUMID_MAX - HUMID_MIN) / 30);
   for (int i = HUMID_MIN; i < HUMID_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
-    if (count == 0 || count == 5 || count==15 || count == 25 ) {
+    if (count == 0 || count == 5 || count == 15 || count == 25) {
       img120x120.fillSprite(TFT_TRANSPARENT);
     }
     if (humid * 10 < i + inc && humid * 10 >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, TFT_RED);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_RED);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR4(i));
     } else if (humid * 10 >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, HUMID_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         HUMID_COLOR4(i));
     } else {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 118, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, TFT_BLACK);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, HUMID_DEG(i),
-                   (HUMID_DEG(i + inc) - 2) % 360, TFT_BLACK);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY48);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY32);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY16);
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+                         TFT_BLACK);
     }
-    img120x120.pushSprite(area < 2 ? 0 : 120,  (area > 0 && area < 3) ? 0 : 120,TFT_TRANSPARENT);
+    img120x120.pushSprite(area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+                          TFT_TRANSPARENT);
     count++;
   }
   drawBmp(img, (unsigned char *)icons[1], 119 - 32, 239 - 64, 64, 64);
@@ -625,44 +805,69 @@ void pressureView(LGFX_Device *img, int x, int y, float pressure) {
   int inc = ((PRESS_MAX - PRESS_MIN) / 30);
   for (int i = PRESS_MIN; i < PRESS_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
-    if (count == 0 || count == 5 || count==15 || count == 25 ) {
+    if (count == 0 || count == 5 || count == 15 || count == 25) {
       img120x120.fillSprite(TFT_TRANSPARENT);
     }
     if (pressure < i + inc && pressure >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, TFT_RED);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_RED);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR4(i));
     } else if (pressure >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, PRESS_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         PRESS_COLOR4(i));
     } else {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 118, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, TFT_BLACK);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, PRESS_DEG(i),
-                   (PRESS_DEG(i + inc) - 2) % 360, TFT_BLACK);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY48);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY32);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY16);
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+                         TFT_BLACK);
     }
-    img120x120.pushSprite(area < 2 ? 0 : 120,  (area > 0 && area < 3) ? 0 : 120,TFT_TRANSPARENT);
+    img120x120.pushSprite(area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+                          TFT_TRANSPARENT);
     count++;
   }
   drawBmp(img, (unsigned char *)icons[2], 119 - 32, 239 - 64, 64, 64);
@@ -675,44 +880,69 @@ void co2View(LGFX_Device *img, int x, int y, float co2) {
   int inc = ((CO2_MAX - CO2_MIN) / 30);
   for (int i = CO2_MIN; i < CO2_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
-    if (count == 0 || count == 5 || count==15 || count == 25 ) {
+    if (count == 0 || count == 5 || count == 15 || count == 25) {
       img120x120.fillSprite(TFT_TRANSPARENT);
     }
     if (co2 < i + inc && co2 >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, TFT_RED);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_RED);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR4(i));
     } else if (co2 >= i) {
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 113, 118, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 109, 113, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR1(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 105, 109, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR2(i));
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 102, 105, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc( area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, CO2_COLOR4(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR1(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR2(i));
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR3(i));
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         CO2_COLOR4(i));
     } else {  // co2 < i
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 118, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, TFT_BLACK);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 101, 119, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0, 100, 102, CO2_DEG(i),
-                   (CO2_DEG(i + inc) - 2) % 360, TFT_BLACK);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         113, 118, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         109, 113, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY48);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         105, 109, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY32);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         102, 105, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY16);
+      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_GRAY64);
+      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+                         100, 102, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+                         TFT_BLACK);
     }
-    img120x120.pushSprite(img,area < 2 ? 0 : 120,  (area > 0 && area < 3) ? 0 : 120,TFT_TRANSPARENT);
+    img120x120.pushSprite(img, area < 2 ? 0 : 120,
+                          (area > 0 && area < 3) ? 0 : 120, TFT_TRANSPARENT);
     count++;
   }
   drawBmp(img, (unsigned char *)icons[3], 119 - 32, 239 - 64, 64, 64);
@@ -807,8 +1037,9 @@ void temperatureGraphBox(LGFX_Sprite *img, int x, int y) {
   for (int i = 0; i < SENSOR_HIST; i++) {
     long t = temperature_hist[(temperature_hist_p + i) % SENSOR_HIST] * 10;
     if (t != -1000 * 10) {
-      img->drawGradientVLine(15 + pos, (height - map(t, imin * 10, imax * 10, 0, height)),
-                    map(t, imin * 10, imax * 10, 0, height), TEMP_COLOR(t), TFT_BLACK);
+      img->drawGradientVLine(
+          15 + pos, (height - map(t, imin * 10, imax * 10, 0, height)),
+          map(t, imin * 10, imax * 10, 0, height), TEMP_COLOR(t), TFT_BLACK);
       pos++;
     }
   }
@@ -853,8 +1084,9 @@ void humidityGraphBox(LGFX_Sprite *img, int x, int y) {
   for (int i = 0; i < SENSOR_HIST; i++) {
     long t = humidity_hist[(humidity_hist_p + i) % SENSOR_HIST] * 10;
     if (t != 0) {
-      img->drawGradientVLine(15 + pos, height - map(t, imin * 10, imax * 10, 0, height),
-                    map(t, imin * 10, imax * 10, 0, height),HUMID_COLOR(t),TFT_BLACK);
+      img->drawGradientVLine(
+          15 + pos, height - map(t, imin * 10, imax * 10, 0, height),
+          map(t, imin * 10, imax * 10, 0, height), HUMID_COLOR(t), TFT_BLACK);
       pos++;
     }
   }
@@ -899,8 +1131,9 @@ void pressureGraphBox(LGFX_Sprite *img, int x, int y) {
   for (int i = 0; i < SENSOR_HIST; i++) {
     long t = (long)pressure_hist[(pressure_hist_p + i) % SENSOR_HIST];
     if (t != 0) {
-      img->drawGradientVLine(15 + pos, height - map(t, imin, imax, 0, height), 
-                    map(t, imin, imax, 0, height),  PRESS_COLOR(t),TFT_BLACK);
+      img->drawGradientVLine(15 + pos, height - map(t, imin, imax, 0, height),
+                             map(t, imin, imax, 0, height), PRESS_COLOR(t),
+                             TFT_BLACK);
       pos++;
     }
   }
@@ -946,7 +1179,8 @@ void co2GraphBox(LGFX_Sprite *img, int x, int y) {
     long t = (long)co2_hist[(co2_hist_p + i) % SENSOR_HIST];
     if (t != 0) {
       img->drawGradientVLine(15 + pos, height - map(t, imin, imax, 0, height),
-                    map(t, imin, imax, 0, height),  CO2_COLOR(t), TFT_BLACK);
+                             map(t, imin, imax, 0, height), CO2_COLOR(t),
+                             TFT_BLACK);
       pos++;
     }
   }
@@ -1003,11 +1237,19 @@ void drawView1(int x, int y, int v, float temp, float humid, float press) {
     pressureValueBox(&img140x60, x + 50, y + 46, press);
     pressureGraphBox(&img160x72, x + 40, y + 100);
   } else if (v == 3) {
-    if (p_view != view || 
-        int(tpms[0].pressure()/10) != int(prev_tpress[0]/10) ||
-        int(tpms[1].pressure()/10) != int(prev_tpress[1]/10) ||
-        int(tpms[2].pressure()/10) != int(prev_tpress[2]/10) ||
-        int(tpms[3].pressure()/10) != int(prev_tpress[3]/10) ){
+    Serial.printf("tpms 0 p: %d pp: %d \n", int(tpms[0].pressure() / 10),
+                  int(prev_tpress[0] / 10));
+    Serial.printf("tpms 1 p: %d pp: %d \n", int(tpms[1].pressure() / 10),
+                  int(prev_tpress[1] / 10));
+    Serial.printf("tpms 2 p: %d pp: %d \n", int(tpms[2].pressure() / 10),
+                  int(prev_tpress[2] / 10));
+    Serial.printf("tpms 3 p: %d pp: %d \n", int(tpms[3].pressure() / 10),
+                  int(prev_tpress[3] / 10));
+    if (p_view != view ||
+        int(tpms[0].pressure() / 10) != int(prev_tpress[0] / 10) ||
+        int(tpms[1].pressure() / 10) != int(prev_tpress[1] / 10) ||
+        int(tpms[2].pressure() / 10) != int(prev_tpress[2] / 10) ||
+        int(tpms[3].pressure() / 10) != int(prev_tpress[3] / 10)) {
       tft1.fillScreen(TFT_BLACK);
       drawBmp(&tft1, (unsigned char *)icons[4], 120 - 32, 120 - 32, 64, 64);
       tpmsViewLeftUp(&img120x120, x, y, &(tpms[0]));
@@ -1134,11 +1376,11 @@ void setup() {
   tft1.setRotation(1);
 
   img120x120.setColorDepth(16);
-  img120x120.createSprite(120,120);
+  img120x120.createSprite(120, 120);
   img140x60.setColorDepth(8);
-  img140x60.createSprite(140,60);
+  img140x60.createSprite(140, 60);
   img160x72.setColorDepth(16);
-  img160x72.createSprite(160,72);
+  img160x72.createSprite(160, 72);
 
   oled1.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   oled2.begin(SSD1306_SWITCHCAPVCC, 0x3C);
