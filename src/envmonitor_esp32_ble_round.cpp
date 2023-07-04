@@ -1,5 +1,5 @@
 #include <SPI.h>
-#include <WiFi.h>
+//#include <WiFi.h>
 #include <Wire.h>
 // #include <OneWire.h>
 
@@ -302,9 +302,9 @@ enum { FACE_NORMAL = 0, FACE_GOOD, FACE_DIRTY, FACE_NODATA, FACE_GURUGURU };
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice *advertisedDevice) {
-    //    Serial.printf("Found %s with RSSI %d \n", //millis() - lastAdv,
-    //     advertisedDevice->getAddress().toString().c_str(),
-    //     advertisedDevice->getRSSI());
+        Serial.printf("Found %s with RSSI %d \n", //millis() - lastAdv,
+         advertisedDevice->getAddress().toString().c_str(),
+         advertisedDevice->getRSSI());
     // Serial.printf("Advertised Device: %s \n RSSI: %d \n",
     // advertisedDevice->toString().c_str(), advertisedDevice->getRSSI());
     int tire = -1;
@@ -1264,6 +1264,7 @@ void drawView1(int x, int y, int v, float temp, float humid, float press) {
       prev_tpress[1] = tpms[1].pressure();
       prev_tpress[2] = tpms[2].pressure();
       prev_tpress[3] = tpms[3].pressure();
+      p_view = view;
     }
   }
   tft1.endWrite();
@@ -1316,7 +1317,7 @@ void setup() {
   tpms[3].battery_raw(90);
   // */
 
-  WiFi.mode(WIFI_OFF);
+//  WiFi.mode(WIFI_OFF);
 
   pinMode(PIN_TOUCH, INPUT);
   Serial.begin(115200);
@@ -1406,14 +1407,24 @@ void setup() {
   String msg = "Initializing";
   messageBox(&img160x72, 40, 100, msg);
 
-  NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DEVICE);
-  NimBLEDevice::setScanDuplicateCacheSize(100);
+  // a4:cf:12:6e:3a:f2 -> fakeTPMS
+  NimBLEAddress tpms_fake_addr("A4:CF:12:6E:3A:F2", 0);
+  NimBLEAddress tpms_cache_addr("A4:CF:12:6E:12:2E", 0);
+   
+  NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DATA);
+  NimBLEDevice::setScanDuplicateCacheSize(20);
   NimBLEDevice::init("");
+  NimBLEDevice::whiteListAdd(tpms_fake_addr);
+  NimBLEDevice::whiteListAdd(tpms_cache_addr);
+//  for (int i = 0; i < 4; i++) {
+//    NimBLEAddress tpms_addr(tpms[i].macaddress().c_str(), 0);
+//    NimBLEDevice::whiteListAdd(tpms_addr);
+//  }
   pBLEScan = NimBLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks(),
                                          false);
-  //  pBLEScan->setFilterPolicy(BLE_HCI_SCAN_FILT_USE_WL);
-  pBLEScan->setActiveScan(true);  // Set active scanning, this will get more
+  pBLEScan->setFilterPolicy(BLE_HCI_SCAN_FILT_USE_WL);
+  pBLEScan->setActiveScan(false);  // Set active scanning, this will get more
                                   // data from the advertiser.
   pBLEScan->setInterval(
       100);  // How often the scan occurs / switches channels; in milliseconds,
