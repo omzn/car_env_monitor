@@ -1410,12 +1410,14 @@ void setup() {
   // a4:cf:12:6e:3a:f2 -> fakeTPMS
   NimBLEAddress tpms_fake_addr("A4:CF:12:6E:3A:F2", 0);
   NimBLEAddress tpms_cache_addr("A4:CF:12:6E:12:2E", 0);
+  NimBLEAddress tpms_cache_addr2("DC:54:75:CD:EE:85", 0);
    
   NimBLEDevice::setScanFilterMode(CONFIG_BTDM_SCAN_DUPL_TYPE_DATA);
   NimBLEDevice::setScanDuplicateCacheSize(20);
   NimBLEDevice::init("");
   NimBLEDevice::whiteListAdd(tpms_fake_addr);
   NimBLEDevice::whiteListAdd(tpms_cache_addr);
+  NimBLEDevice::whiteListAdd(tpms_cache_addr2);
 //  for (int i = 0; i < 4; i++) {
 //    NimBLEAddress tpms_addr(tpms[i].macaddress().c_str(), 0);
 //    NimBLEDevice::whiteListAdd(tpms_addr);
