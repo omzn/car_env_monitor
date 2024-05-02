@@ -14,6 +14,7 @@
 // #include "BLEDevice.h"
 #include "BLE_TPMS.h"
 #include "DHT12.h"
+#include "SHT3X.h"
 #include "LGFX_GC9A01.h"
 #include "MazdaTypeBold18pt.h"
 #include "MazdaTypeBold24pt.h"
@@ -254,9 +255,10 @@
 SCD4x sensorCO2;
 DHT12 sensorTempHumid;
 Adafruit_BMP280 sensorPressure;
+SHT3X sht30;
 
 uint32_t seq = 0;  // remember number of boots in RTC Memory
-uint32_t stable = 0;
+uint32_t stable = 1;
 uint8_t view = 0;
 uint8_t p_view = 0;
 
@@ -1237,13 +1239,13 @@ void drawView1(int x, int y, int v, float temp, float humid, float press) {
     pressureValueBox(&img140x60, x + 50, y + 46, press);
     pressureGraphBox(&img160x72, x + 40, y + 100);
   } else if (v == 3) {
-    Serial.printf("tpms 0 p: %d pp: %d \n", int(tpms[0].pressure() / 10),
+    DPRINTF("tpms 0 p: %d pp: %d \n", int(tpms[0].pressure() / 10),
                   int(prev_tpress[0] / 10));
-    Serial.printf("tpms 1 p: %d pp: %d \n", int(tpms[1].pressure() / 10),
+    DPRINTF("tpms 1 p: %d pp: %d \n", int(tpms[1].pressure() / 10),
                   int(prev_tpress[1] / 10));
-    Serial.printf("tpms 2 p: %d pp: %d \n", int(tpms[2].pressure() / 10),
+    DPRINTF("tpms 2 p: %d pp: %d \n", int(tpms[2].pressure() / 10),
                   int(prev_tpress[2] / 10));
-    Serial.printf("tpms 3 p: %d pp: %d \n", int(tpms[3].pressure() / 10),
+    DPRINTF("tpms 3 p: %d pp: %d \n", int(tpms[3].pressure() / 10),
                   int(prev_tpress[3] / 10));
     if (p_view != view ||
         int(tpms[0].pressure() / 10) != int(prev_tpress[0] / 10) ||
@@ -1454,30 +1456,33 @@ void loop() {
     prev_millis = millis();
     //    temp0 = sensorTempHumid.readTemperature();
     //    delay(100);
-    humid = sensorTempHumid.readHumidity();
-    delay(100);
+    int r = sht30.get();
+    if (r == 0) {
+      humid = sht30.readHumidity();
+      temp1 = sht30.readTemperature();
+    } else {
+      humid = sensorTempHumid.readHumidity();
+      temp1 = sensorCO2.getTemperature();
+    }
     press = (sensorPressure.readPressure() / 100.0);
     temp2 = sensorPressure.readTemperature();
     delay(100);
     co2 = sensorCO2.getCO2();
-    temp1 = sensorCO2.getTemperature();
     delay(100);
-    if (seq > 3) {
-      stable = 1;
-    } else if (!stable) {
-      stable = 0;
-    }
-    seq++;
-    //    Serial.printf(">>> seq: %d, t0: %.1f, t1: %.1f, t2: %.1f, h: %.1f, p:
-    //    %.1f c: %.1f\r\n", seq, temp0, temp1, temp2, humid, press, co2);
+//    if (seq > 3) {
+//    stable = 1;
+//    } else if (!stable) {
+//      stable = 0;
+//    }
+    DPRINTF(">>> t0: %.1f, t1: %.1f, t2: %.1f, h: %.1f, p: %.1f c: %.1f\n", temp0, temp1, temp2, humid, press, co2);
     temp = temp1;
 
-    if (humid == 0 || press < 850 || co2 == 0 || co2 > 5000) {
+    if (humid == 0 || press < 850 || co2 == 0 || co2 > 7000) {
       valid_data = false;
     } else {
       valid_data = true;
     }
-    if (valid_data && stable) {
+    if (valid_data && stable && (seq % 2 == 0)) {
       temperature_hist[temperature_hist_p++] = temp;
       humidity_hist[humidity_hist_p++] = humid;
       pressure_hist[pressure_hist_p++] = press;
@@ -1487,6 +1492,7 @@ void loop() {
       pressure_hist_p %= SENSOR_HIST;
       co2_hist_p %= SENSOR_HIST;
     }
+    seq++;
   }
 
   if (btnint) {

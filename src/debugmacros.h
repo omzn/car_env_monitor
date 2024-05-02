@@ -8,6 +8,7 @@
 #ifdef DEBUG
 #define DPRINT(...)    Serial.print(__VA_ARGS__)
 #define DPRINTLN(...)  Serial.println(__VA_ARGS__)
+#define DPRINTF(...)  Serial.printf(__VA_ARGS__)
 //#define DPRINT(...)    M5.Lcd.print(__VA_ARGS__)
 //#define DPRINTLN(...)  M5.Lcd.println(__VA_ARGS__)
 #else
