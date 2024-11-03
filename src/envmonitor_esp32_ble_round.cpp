@@ -275,10 +275,11 @@ uint32_t touch_duration = 0;
 // 準備したクラスのインスタンスを作成します。
 static LGFX_MiniKit_GC9A01_0 tft0; // 右
 static LGFX_MiniKit_GC9A01_1 tft1; // 左
-static LGFX_Sprite img120x120(&tft1);
-static LGFX_Sprite img140x60(&tft1);
-static LGFX_Sprite img160x72(&tft1);
-static LGFX_Sprite img240x240(&tft1);
+static LGFX_Sprite img120x120[2];
+//static LGFX_Sprite img120x120(&tft1);
+static LGFX_Sprite img140x60;
+static LGFX_Sprite img160x72;
+//static LGFX_Sprite img240x240;
 Adafruit_SSD1306 oled1(64, 32, &Wire, -1);
 Adafruit_SSD1306 oled2(64, 32, &Wire1, -1);
 
@@ -314,11 +315,9 @@ enum { FACE_NORMAL = 0, FACE_GOOD, FACE_DIRTY, FACE_NODATA, FACE_GURUGURU };
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice *advertisedDevice) {
-        Serial.printf("Found %s with RSSI %d \n", //millis() - lastAdv,
+        DPRINTF("Found %s with RSSI %d \n", //millis() - lastAdv,
          advertisedDevice->getAddress().toString().c_str(),
          advertisedDevice->getRSSI());
-    // Serial.printf("Advertised Device: %s \n RSSI: %d \n",
-    // advertisedDevice->toString().c_str(), advertisedDevice->getRSSI());
     int tire = -1;
     if (advertisedDevice->haveManufacturerData() == true) {
       std::string data = advertisedDevice->getManufacturerData();
@@ -327,7 +326,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
         if (tire >= 0) {
           tpms[tire].scan(data);
           tpms[tire].updated(true);
-          Serial.printf(">>> tire %d, p: %.1f, t: %.1f, b: %.0f\n", tire,
+          DPRINTF(">>> tire %d, p: %.1f, t: %.1f, b: %.0f\n", tire,
                         tpms[tire].pressure(), tpms[tire].temp() / 100.0,
                         tpms[tire].battery());
         }
@@ -657,72 +656,76 @@ void temperatureView(LGFX_Device *img, int x, int y, float temp) {
   img->startWrite();
   // img120x120.clearDisplay();
   int inc = ((TEMP_MAX - TEMP_MIN) / 30);
+  int flip = 0;
   for (int i = TEMP_MIN; i < TEMP_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
     if (count == 0 || count == 5 || count == 15 || count == 25) {
-      img120x120.fillSprite(TFT_TRANSPARENT);
+      flip = flip ? 0 : 1;      
+      img120x120[flip].fillSprite(TFT_TRANSPARENT);
     }
     if (temp * 10 < i + inc && temp * 10 >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR3(i));
 //      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
 //                         101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
 //                         TFT_RED);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR4(i));
     } else if (temp * 10 >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR4(i));
 
     } else {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_GRAY48);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_GRAY32);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_GRAY16);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_BLACK);
     }
-    img120x120.pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+    if (count == 4 || count == 14 || count == 24 || count == 29 ) {
+      img120x120[flip].pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
                           TFT_TRANSPARENT);
+    }
     count++;
   }
   drawBmp(img, (unsigned char *)icons[0], 119 - 32, 239 - 64, 64, 64);
@@ -733,71 +736,75 @@ void humidityView(LGFX_Device *img, int x, int y, float humid) {
   int count = 0, area = 0;
   img->startWrite();
   int inc = ((HUMID_MAX - HUMID_MIN) / 30);
+  int flip = 0;
   for (int i = HUMID_MIN; i < HUMID_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
     if (count == 0 || count == 5 || count == 15 || count == 25) {
-      img120x120.fillSprite(TFT_TRANSPARENT);
+      flip = flip ? 0 : 1;      
+      img120x120[flip].fillSprite(TFT_TRANSPARENT);
     }
     if (humid * 10 < i + inc && humid * 10 >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR3(i));
-//      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+//      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
 //                         101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
 //                         TFT_RED);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR4(i));
     } else if (humid * 10 >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR4(i));
     } else {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_GRAY48);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_GRAY32);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_GRAY16);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_BLACK);
     }
-    img120x120.pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
-                          TFT_TRANSPARENT);
+    if (count == 4 || count == 14 || count == 24 || count == 29 ) {
+      img120x120[flip].pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+                            TFT_TRANSPARENT);
+    }
     count++;
   }
   drawBmp(img, (unsigned char *)icons[1], 119 - 32, 239 - 64, 64, 64);
@@ -808,71 +815,75 @@ void pressureView(LGFX_Device *img, int x, int y, float pressure) {
   int count = 0, area = 0;
   img->startWrite();
   int inc = ((PRESS_MAX - PRESS_MIN) / 30);
+  int flip = 0;
   for (int i = PRESS_MIN; i < PRESS_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
     if (count == 0 || count == 5 || count == 15 || count == 25) {
-      img120x120.fillSprite(TFT_TRANSPARENT);
+      flip = flip ? 0 : 1;      
+      img120x120[flip].fillSprite(TFT_TRANSPARENT);
     }
     if (pressure < i + inc && pressure >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR3(i));
-//      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+//      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
 //                         101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
 //                         TFT_RED);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR4(i));
     } else if (pressure >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR4(i));
     } else {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_GRAY48);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_GRAY32);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_GRAY16);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_BLACK);
     }
-    img120x120.pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
-                          TFT_TRANSPARENT);
+    if (count == 4 || count == 14 || count == 24 || count == 29 ) {
+      img120x120[flip].pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+                            TFT_TRANSPARENT);
+    }
     count++;
   }
   drawBmp(img, (unsigned char *)icons[2], 119 - 32, 239 - 64, 64, 64);
@@ -883,71 +894,75 @@ void co2View(LGFX_Device *img, int x, int y, float co2) {
   int count = 0, area = 0;
   img->startWrite();
   int inc = ((CO2_MAX - CO2_MIN) / 30);
+  int flip = 0;
   for (int i = CO2_MIN; i < CO2_MAX; i += inc) {
     area = count < 5 ? 0 : (count < 15 ? 1 : (count < 25 ? 2 : 3));
     if (count == 0 || count == 5 || count == 15 || count == 25) {
-      img120x120.fillSprite(TFT_TRANSPARENT);
+      flip = flip ? 0 : 1;      
+      img120x120[flip].fillSprite(TFT_TRANSPARENT);
     }
     if (co2 < i + inc && co2 >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR3(i));
-//      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+//      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
 //                         101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
 //                         TFT_RED);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR4(i));
     } else if (co2 >= i) {
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR1(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR2(i));
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR4(i));
     } else {  // co2 < i
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          113, 118, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          109, 113, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          TFT_GRAY48);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          105, 109, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          TFT_GRAY32);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          TFT_GRAY16);
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          TFT_GRAY64);
-      img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+      img120x120[flip].fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          TFT_BLACK);
     }
-    img120x120.pushSprite(img, area < 2 ? 0 : 120,
-                          (area > 0 && area < 3) ? 0 : 120, TFT_TRANSPARENT);
+    if (count == 4 || count == 14 || count == 24 || count == 29 ) {
+      img120x120[flip].pushSprite(img, area < 2 ? 0 : 120,
+                            (area > 0 && area < 3) ? 0 : 120, TFT_TRANSPARENT);
+    }
     count++;
   }
   drawBmp(img, (unsigned char *)icons[3], 119 - 32, 239 - 64, 64, 64);
@@ -1256,13 +1271,13 @@ void drawView(LGFX_Device *tft, int x, int y, int v, int pv) {
         int(tpms[3].pressure() / 10) != int(prev_tpress[3] / 10)) {
       tft->fillScreen(TFT_BLACK);
       drawBmp(tft, (unsigned char *)icons[4], 120 - 32, 120 - 32, 64, 64);
-      tpmsViewLeftUp(&img120x120, x, y, &(tpms[0]), tft);
+      tpmsViewLeftUp(&img120x120[0], x, y, &(tpms[0]), tft);
+      tpmsViewLeftDown(&img120x120[1], x, y + 120, &(tpms[2]), tft);
+      tpmsViewRightUp(&img120x120[0], x + 120, y, &(tpms[1]), tft);
+      tpmsViewRightDown(&img120x120[1], x + 120, y + 120, &(tpms[3]), tft);
       tpmsValueBox(&img140x60, x + 5, y + 60, &(tpms[0]), tft);
-      tpmsViewLeftDown(&img120x120, x, y + 120, &(tpms[2]), tft);
       tpmsValueBox(&img140x60, x + 5, y + 120 + 15, &(tpms[2]), tft);
-      tpmsViewRightUp(&img120x120, x + 120, y, &(tpms[1]), tft);
       tpmsValueBox(&img140x60, x + 120 - 35, y + 60, &(tpms[1]), tft);
-      tpmsViewRightDown(&img120x120, x + 120, y + 120, &(tpms[3]), tft);
       tpmsValueBox(&img140x60, x + 120 - 35, y + 120 + 15, &(tpms[3]), tft);
       prev_tpress[0] = tpms[0].pressure();
       prev_tpress[1] = tpms[1].pressure();
@@ -1383,14 +1398,24 @@ void setup() {
 
   DPRINTLN("LCD Initialized");
 
-  img120x120.setColorDepth(16);
-  img120x120.createSprite(120, 120);
+
+  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_DMA):%d\n", heap_caps_get_free_size(MALLOC_CAP_DMA) );
+  Serial.printf("heap_caps_get_largest_free_block(MALLOC_CAP_DMA):%d\n", heap_caps_get_largest_free_block(MALLOC_CAP_DMA) );
+
+  img120x120[0].setColorDepth(16);
+  img120x120[0].createSprite(120, 120);
+  img120x120[1].setColorDepth(16);
+  img120x120[1].createSprite(120, 120);
   img140x60.setColorDepth(8);
   img140x60.createSprite(140, 60);
   img160x72.setColorDepth(16);
   img160x72.createSprite(160, 72);
 //  img240x240.setColorDepth(16);
 //  img240x240.createSprite(240, 240);
+
+  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_DMA):%d\n", heap_caps_get_free_size(MALLOC_CAP_DMA) );
+  Serial.printf("heap_caps_get_largest_free_block(MALLOC_CAP_DMA):%d\n", heap_caps_get_largest_free_block(MALLOC_CAP_DMA) );
+
 
   oled1.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   oled2.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -1492,7 +1517,8 @@ void loop() {
     } else {
       valid_data = true;
     }
-    if (valid_data && stable && (seq % 2 == 0)) {
+    // データ保存は 5 * 6 = 30秒毎 x 90 = 45分のグラフができる．
+    if (valid_data && stable && (seq % 6 == 0)) {
       temperature_hist[temperature_hist_p++] = temp;
       humidity_hist[humidity_hist_p++] = humid;
       pressure_hist[pressure_hist_p++] = press;
