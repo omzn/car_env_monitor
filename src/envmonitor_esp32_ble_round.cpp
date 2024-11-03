@@ -16,8 +16,8 @@
 #include "DHT12.h"
 #include "SHT3X.h"
 #include "LGFX_GC9A01.h"
-#include "MazdaTypeBold18pt.h"
-#include "MazdaTypeBold24pt.h"
+#include "MazdaTypeRegular18pt.h"
+#include "MazdaTypeRegular24pt.h"
 #include "aquatan_eye.h"
 #include "bitmaps.h"
 #include "debugmacros.h"
@@ -31,9 +31,9 @@
 #define PIN_RX2 GPIO_NUM_16
 
 // #define FONT_SANS24_IMG img->setFont(&fonts::FreeSans24pt7b)
-#define FONT_SANS24_IMG img->setFont(&Mazda_Type_Bold24pt7b)
+#define FONT_SANS24_IMG img->setFont(&Mazda_Type_Regular24pt7b)
 // #define FONT_SANS18_IMG img->setFont(&fonts::FreeSans18pt7b)
-#define FONT_SANS18_IMG img->setFont(&Mazda_Type_Bold18pt7b)
+#define FONT_SANS18_IMG img->setFont(&Mazda_Type_Regular18pt7b)
 #define FONT_SANS_IMG img->setFont(&fonts::FreeSans9pt7b)
 
 #define TFT_GRAY96 img->color888(96, 96, 96)
@@ -68,10 +68,10 @@
 #define PRESS_MAX (1040)
 
 #define HUMID_MIN (0)
-#define HUMID_1ST (200)
-#define HUMID_2ND (300)
-#define HUMID_3RD (400)
-#define HUMID_MAX (600)
+#define HUMID_1ST (225)
+#define HUMID_2ND (450)
+#define HUMID_3RD (675)
+#define HUMID_MAX (900)
 
 #define CO2_DEG(v) \
   ((90 + constrain(map(v, CO2_MIN, CO2_MAX, 45, 315), 45, 315)) % 360)
@@ -248,7 +248,7 @@
                      : img->color888(31, 215 - 54 - 54 - 54 - 27, 0))))
 
 #define SENSOR_HIST (90)
-#define NUM_OF_VIEWS (4)
+#define NUM_OF_VIEWS (5)
 
 #define ACCEL_RANGE (0.20)
 
@@ -259,18 +259,26 @@ SHT3X sht30;
 
 uint32_t seq = 0;  // remember number of boots in RTC Memory
 uint32_t stable = 1;
-uint8_t view = 0;
-uint8_t p_view = 0;
+uint8_t view1 = 0;
+uint8_t p_view1 = 0;
+uint8_t view0 = 0;
+uint8_t p_view0 = 0;
 
+#define LONG_PRESS_DURATION 1000
 uint32_t last_touched = 0;
 uint8_t btnint = 0;
+uint8_t touched = 0;
+uint32_t touch_start = 0;
+uint32_t touch_end = 0;
+uint32_t touch_duration = 0;
 
 // 準備したクラスのインスタンスを作成します。
-static LGFX_MiniKit_GC9A01_0 tft0;
-static LGFX_MiniKit_GC9A01_1 tft1;
+static LGFX_MiniKit_GC9A01_0 tft0; // 右
+static LGFX_MiniKit_GC9A01_1 tft1; // 左
 static LGFX_Sprite img120x120(&tft1);
 static LGFX_Sprite img140x60(&tft1);
 static LGFX_Sprite img160x72(&tft1);
+static LGFX_Sprite img240x240(&tft1);
 Adafruit_SSD1306 oled1(64, 32, &Wire, -1);
 Adafruit_SSD1306 oled2(64, 32, &Wire1, -1);
 
@@ -285,6 +293,8 @@ Preferences prefs;
 AquatanEye eye_left(&oled1);
 AquatanEye eye_right(&oled2);
 AquatanEyes eyes(&eye_left, &eye_right);
+
+float temp, humid, press, co2, temp0, temp1, temp2;
 
 float temperature_hist[SENSOR_HIST];
 float pressure_hist[SENSOR_HIST] = {0};
@@ -378,13 +388,6 @@ String format_digit(float f, int digits, int decimal = 0) {
   return s;
 }
 
-void handleTouch() {
-  if (millis() - last_touched > 500) {
-    btnint = 1;
-    last_touched = millis();
-  }
-}
-
 void drawBmp(LGFX_Device *sp, unsigned char *data, int16_t x, int16_t y,
              int16_t w, int16_t h) {
   uint16_t row, col, buffidx = 0;
@@ -398,7 +401,7 @@ void drawBmp(LGFX_Device *sp, unsigned char *data, int16_t x, int16_t y,
   }
 }
 
-void tpmsValueBox(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
+void tpmsValueBox(LGFX_Sprite *img, int x, int y, BLEtpms *tp, LGFX_Device *tft) {
   img->fillSprite(TFT_TRANSPARENT);
   //  img->setTextColor(TEMP_COLOR(temp * 10));
   img->setTextColor(TFT_WHITE);
@@ -426,10 +429,10 @@ void tpmsValueBox(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
     String str = "---";
     img->drawString(str, img->width() / 2 - img->textWidth(str) / 2, 0);
   }
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void tpmsViewLeftUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
+void tpmsViewLeftUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp, LGFX_Device *tft) {
   img->fillSprite(TFT_TRANSPARENT);
   FONT_SANS_IMG;
   img->setTextColor(TFT_SILVER);
@@ -483,11 +486,11 @@ void tpmsViewLeftUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
     img->drawRoundRect(11, 94, 18, 10, 3, TFT_LIGHTGRAY);
     img->fillRect(8, 97, 2, 4, TFT_LIGHTGRAY);
   }
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
   tp->updated(false);
 }
 
-void tpmsViewLeftDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
+void tpmsViewLeftDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp, LGFX_Device *tft) {
   img->fillSprite(TFT_TRANSPARENT);
   FONT_SANS_IMG;
   img->setTextColor(TFT_SILVER);
@@ -537,11 +540,11 @@ void tpmsViewLeftDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
     img->drawRoundRect(11, 8, 18, 10, 3, TFT_LIGHTGRAY);
     img->fillRect(8, 11, 2, 4, TFT_LIGHTGRAY);
   }
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
   tp->updated(false);
 }
 
-void tpmsViewRightUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
+void tpmsViewRightUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp, LGFX_Device *tft) {
   img->fillSprite(TFT_TRANSPARENT);
   FONT_SANS_IMG;
   img->setTextColor(TFT_SILVER);
@@ -591,11 +594,11 @@ void tpmsViewRightUp(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
     img->drawRoundRect(89, 94, 18, 10, 3, TFT_LIGHTGRAY);
     img->fillRect(88, 97, 2, 4, TFT_LIGHTGRAY);
   }
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
   tp->updated(false);
 }
 
-void tpmsViewRightDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
+void tpmsViewRightDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp, LGFX_Device *tft) {
   img->fillSprite(TFT_TRANSPARENT);
   FONT_SANS_IMG;
   img->setTextColor(TFT_SILVER);
@@ -645,7 +648,7 @@ void tpmsViewRightDown(LGFX_Sprite *img, int x, int y, BLEtpms *tp) {
     img->drawRoundRect(89, 8, 18, 10, 3, TFT_LIGHTGRAY);
     img->fillRect(88, 11, 2, 4, TFT_LIGHTGRAY);
   }
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
   tp->updated(false);
 }
 
@@ -672,9 +675,9 @@ void temperatureView(LGFX_Device *img, int x, int y, float temp) {
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
-                         101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
-                         TFT_RED);
+//      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+//                         101, 119, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
+//                         TFT_RED);
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TEMP_COLOR4(i));
@@ -718,7 +721,7 @@ void temperatureView(LGFX_Device *img, int x, int y, float temp) {
                          100, 102, TEMP_DEG(i), (TEMP_DEG(i + inc) - 2) % 360,
                          TFT_BLACK);
     }
-    img120x120.pushSprite(area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+    img120x120.pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
                           TFT_TRANSPARENT);
     count++;
   }
@@ -748,9 +751,9 @@ void humidityView(LGFX_Device *img, int x, int y, float humid) {
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
-                         101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
-                         TFT_RED);
+//      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+//                         101, 119, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
+//                         TFT_RED);
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          HUMID_COLOR4(i));
@@ -793,7 +796,7 @@ void humidityView(LGFX_Device *img, int x, int y, float humid) {
                          100, 102, HUMID_DEG(i), (HUMID_DEG(i + inc) - 2) % 360,
                          TFT_BLACK);
     }
-    img120x120.pushSprite(area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+    img120x120.pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
                           TFT_TRANSPARENT);
     count++;
   }
@@ -823,9 +826,9 @@ void pressureView(LGFX_Device *img, int x, int y, float pressure) {
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
-                         101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
-                         TFT_RED);
+//      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+//                         101, 119, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
+//                         TFT_RED);
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          PRESS_COLOR4(i));
@@ -868,7 +871,7 @@ void pressureView(LGFX_Device *img, int x, int y, float pressure) {
                          100, 102, PRESS_DEG(i), (PRESS_DEG(i + inc) - 2) % 360,
                          TFT_BLACK);
     }
-    img120x120.pushSprite(area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
+    img120x120.pushSprite(img, area < 2 ? 0 : 120, (area > 0 && area < 3) ? 0 : 120,
                           TFT_TRANSPARENT);
     count++;
   }
@@ -898,9 +901,9 @@ void co2View(LGFX_Device *img, int x, int y, float co2) {
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          102, 105, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR3(i));
-      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
-                         101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
-                         TFT_RED);
+//      img120x120.drawArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
+//                         101, 119, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
+//                         TFT_RED);
       img120x120.fillArc(area < 2 ? 119 : 0, (area > 0 && area < 3) ? 119 : 0,
                          100, 102, CO2_DEG(i), (CO2_DEG(i + inc) - 2) % 360,
                          CO2_COLOR4(i));
@@ -951,7 +954,7 @@ void co2View(LGFX_Device *img, int x, int y, float co2) {
   img->endWrite();
 }
 
-void temperatureValueBox(LGFX_Sprite *img, int x, int y, float temp) {
+void temperatureValueBox(LGFX_Sprite *img, int x, int y, float temp, LGFX_Device *tft) {
   img->fillSprite(TFT_BLACK);
   //  img->setTextColor(TEMP_COLOR(temp * 10));
   img->setTextColor(TFT_WHITE);
@@ -971,10 +974,10 @@ void temperatureValueBox(LGFX_Sprite *img, int x, int y, float temp) {
                   img->width() / 2 - ((intWidth + decimalWidth) / 2) + intWidth,
                   intHeight - decimalHeight - 2);
 
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void humidityValueBox(LGFX_Sprite *img, int x, int y, float humid) {
+void humidityValueBox(LGFX_Sprite *img, int x, int y, float humid, LGFX_Device *tft) {
   img->fillSprite(TFT_BLACK);
   //  img->setTextColor(HUMID_COLOR(humid * 10));
   img->setTextColor(TFT_WHITE);
@@ -993,20 +996,20 @@ void humidityValueBox(LGFX_Sprite *img, int x, int y, float humid) {
   img->drawString(sdecimal,
                   img->width() / 2 - ((intWidth + decimalWidth) / 2) + intWidth,
                   intHeight - decimalHeight - 2);
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void pressureValueBox(LGFX_Sprite *img, int x, int y, float press) {
+void pressureValueBox(LGFX_Sprite *img, int x, int y, float press, LGFX_Device *tft) {
   img->fillSprite(TFT_BLACK);
   FONT_SANS24_IMG;
   //  img->setTextColor(PRESS_COLOR(press));
   img->setTextColor(TFT_WHITE);
   String str = format_digit(press, 4, 0);
   img->drawString(str, img->width() / 2 - img->textWidth(str) / 2, 0);
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void co2ValueBox(LGFX_Sprite *img, int x, int y, float co2) {
+void co2ValueBox(LGFX_Sprite *img, int x, int y, float co2, LGFX_Device *tft) {
   img->fillSprite(TFT_BLACK);
   FONT_SANS24_IMG;
   //  img->setTextColor(CO2_COLOR(co2));
@@ -1014,10 +1017,10 @@ void co2ValueBox(LGFX_Sprite *img, int x, int y, float co2) {
   String str = format_digit(co2, 4);
   img->drawString(str, img->width() / 2 - img->textWidth(str) / 2, 0);
 
-  img->pushSprite(&tft0, x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void temperatureGraphBox(LGFX_Sprite *img, int x, int y) {
+void temperatureGraphBox(LGFX_Sprite *img, int x, int y, LGFX_Device *tft) {
   int width = 160;
   int height = 72;
   img->fillSprite(TFT_BLACK);
@@ -1061,10 +1064,10 @@ void temperatureGraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
   img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void humidityGraphBox(LGFX_Sprite *img, int x, int y) {
+void humidityGraphBox(LGFX_Sprite *img, int x, int y, LGFX_Device *tft) {
   int width = 160;
   int height = 72;
   img->fillSprite(TFT_BLACK);
@@ -1108,10 +1111,10 @@ void humidityGraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
   img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void pressureGraphBox(LGFX_Sprite *img, int x, int y) {
+void pressureGraphBox(LGFX_Sprite *img, int x, int y, LGFX_Device *tft) {
   int width = 160;
   int height = 72;
   img->fillSprite(TFT_BLACK);
@@ -1155,10 +1158,10 @@ void pressureGraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
   img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void co2GraphBox(LGFX_Sprite *img, int x, int y) {
+void co2GraphBox(LGFX_Sprite *img, int x, int y, LGFX_Device *tft) {
   int width = 160;
   int height = 72;
   img->fillSprite(TFT_BLACK);
@@ -1202,43 +1205,42 @@ void co2GraphBox(LGFX_Sprite *img, int x, int y) {
   img->drawLine(10, height - 1, width - 50, height - 1, TFT_GRAY64);
   img->drawLine(10, height / 2, width - 50, height / 2, TFT_GRAY64);
 
-  img->pushSprite(&tft0, x, y, TFT_TRANSPARENT);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void messageBox(LGFX_Sprite *img, int x, int y, String message) {
+void messageBox(LGFX_Sprite *img, int x, int y, String message, LGFX_Device *tft) {
   img->fillSprite(TFT_TRANSPARENT);
-  img->fillRoundRect(0, 0, 160, 72, 5, TFT_NAVY);
-  img->drawRoundRect(0, 0, 160, 72, 5, TFT_WHITE);
-  img->drawRoundRect(1, 1, 158, 70, 5, TFT_WHITE);
+  img->fillRoundRect(0, 16, 160, 40, 5, TFT_NAVY);
+  img->drawRoundRect(0, 16, 160, 40, 5, TFT_WHITE);
+  img->drawRoundRect(1, 17, 158, 38, 5, TFT_WHITE);
   FONT_SANS_IMG;
   img->setTextColor(TFT_WHITE);
-  img->drawString(message, 5, 25);
-  img->pushSprite(x, y, TFT_TRANSPARENT);
+  img->drawString(message, 5, 30);
+  img->pushSprite(tft, x, y, TFT_TRANSPARENT);
 }
 
-void drawView0(int x, int y, int v, float co2) {
-  tft0.startWrite();
-  co2View(&tft0, x, y, co2);
-  co2ValueBox(&img140x60, x + 50, y + 46, co2);
-  co2GraphBox(&img160x72, x + 40, y + 100);
-  tft0.endWrite();
-}
-
-void drawView1(int x, int y, int v, float temp, float humid, float press) {
-  tft1.startWrite();
+void drawView(LGFX_Device *tft, int x, int y, int v, int pv) {
+  tft->startWrite();
   if (v == 0) {
-    temperatureView(&tft1, x, y, temp);
-    temperatureValueBox(&img140x60, x + 50, y + 46, temp);
-    temperatureGraphBox(&img160x72, x + 40, y + 100);
+    //DPRINTF("Draw Temperature %f \n", temp);
+    temperatureView(tft, x, y, temp);
+    //DPRINTLN("Draw Temperature Value");
+    temperatureValueBox(&img140x60, x + 50, y + 46, temp, tft);
+    //DPRINTLN("Draw Temperature Graph");
+    temperatureGraphBox(&img160x72, x + 40, y + 100, tft);
   } else if (v == 1) {
-    humidityView(&tft1, x, y, humid);
-    humidityValueBox(&img140x60, x + 50, y + 46, humid);
-    humidityGraphBox(&img160x72, x + 40, y + 100);
+    humidityView(tft, x, y, humid);
+    humidityValueBox(&img140x60, x + 50, y + 46, humid, tft);
+    humidityGraphBox(&img160x72, x + 40, y + 100, tft);
   } else if (v == 2) {
-    pressureView(&tft1, x, y, press);
-    pressureValueBox(&img140x60, x + 50, y + 46, press);
-    pressureGraphBox(&img160x72, x + 40, y + 100);
+    pressureView(tft, x, y, press);
+    pressureValueBox(&img140x60, x + 50, y + 46, press, tft);
+    pressureGraphBox(&img160x72, x + 40, y + 100, tft);
   } else if (v == 3) {
+    co2View(tft, x, y, co2);
+    co2ValueBox(&img140x60, x + 50, y + 46, co2, tft);
+    co2GraphBox(&img160x72, x + 40, y + 100, tft);
+  } else if (v == 4) {
     DPRINTF("tpms 0 p: %d pp: %d \n", int(tpms[0].pressure() / 10),
                   int(prev_tpress[0] / 10));
     DPRINTF("tpms 1 p: %d pp: %d \n", int(tpms[1].pressure() / 10),
@@ -1247,34 +1249,34 @@ void drawView1(int x, int y, int v, float temp, float humid, float press) {
                   int(prev_tpress[2] / 10));
     DPRINTF("tpms 3 p: %d pp: %d \n", int(tpms[3].pressure() / 10),
                   int(prev_tpress[3] / 10));
-    if (p_view != view ||
+    if (pv != v ||
         int(tpms[0].pressure() / 10) != int(prev_tpress[0] / 10) ||
         int(tpms[1].pressure() / 10) != int(prev_tpress[1] / 10) ||
         int(tpms[2].pressure() / 10) != int(prev_tpress[2] / 10) ||
         int(tpms[3].pressure() / 10) != int(prev_tpress[3] / 10)) {
-      tft1.fillScreen(TFT_BLACK);
-      drawBmp(&tft1, (unsigned char *)icons[4], 120 - 32, 120 - 32, 64, 64);
-      tpmsViewLeftUp(&img120x120, x, y, &(tpms[0]));
-      tpmsValueBox(&img140x60, x + 5, y + 60, &(tpms[0]));
-      tpmsViewLeftDown(&img120x120, x, y + 120, &(tpms[2]));
-      tpmsValueBox(&img140x60, x + 5, y + 120 + 15, &(tpms[2]));
-      tpmsViewRightUp(&img120x120, x + 120, y, &(tpms[1]));
-      tpmsValueBox(&img140x60, x + 120 - 35, y + 60, &(tpms[1]));
-      tpmsViewRightDown(&img120x120, x + 120, y + 120, &(tpms[3]));
-      tpmsValueBox(&img140x60, x + 120 - 35, y + 120 + 15, &(tpms[3]));
+      tft->fillScreen(TFT_BLACK);
+      drawBmp(tft, (unsigned char *)icons[4], 120 - 32, 120 - 32, 64, 64);
+      tpmsViewLeftUp(&img120x120, x, y, &(tpms[0]), tft);
+      tpmsValueBox(&img140x60, x + 5, y + 60, &(tpms[0]), tft);
+      tpmsViewLeftDown(&img120x120, x, y + 120, &(tpms[2]), tft);
+      tpmsValueBox(&img140x60, x + 5, y + 120 + 15, &(tpms[2]), tft);
+      tpmsViewRightUp(&img120x120, x + 120, y, &(tpms[1]), tft);
+      tpmsValueBox(&img140x60, x + 120 - 35, y + 60, &(tpms[1]), tft);
+      tpmsViewRightDown(&img120x120, x + 120, y + 120, &(tpms[3]), tft);
+      tpmsValueBox(&img140x60, x + 120 - 35, y + 120 + 15, &(tpms[3]), tft);
       prev_tpress[0] = tpms[0].pressure();
       prev_tpress[1] = tpms[1].pressure();
       prev_tpress[2] = tpms[2].pressure();
       prev_tpress[3] = tpms[3].pressure();
-      p_view = view;
     }
   }
-  tft1.endWrite();
+  tft->endWrite();
 }
 
-void drawScreen(float temp, float humid, float press, float co2) {
-  drawView0(0, 0, view, co2);
-  drawView1(0, 0, view, temp, humid, press);
+void drawScreen() {
+  //DPRINTF("view: %d %d\n",view0,view1);
+  drawView(&tft0, 0, 0, view0, p_view0);
+  drawView(&tft1, 0, 0, view1, p_view1);
 }
 
 void changeFace(int face) {
@@ -1360,7 +1362,8 @@ void setup() {
   DPRINT("Z:");
   DPRINTLN(z_accel_center);
   prefs.begin("aquatan", false);
-  view = prefs.getUShort("view", 0);
+  view1 = prefs.getUShort("view1", 0);
+  view0 = prefs.getUShort("view0", 3);
 
   for (int i = 0; i < SENSOR_HIST; i++) {
     temperature_hist[i] = -1000;
@@ -1378,12 +1381,16 @@ void setup() {
   tft0.setRotation(3);
   tft1.setRotation(1);
 
+  DPRINTLN("LCD Initialized");
+
   img120x120.setColorDepth(16);
   img120x120.createSprite(120, 120);
   img140x60.setColorDepth(8);
   img140x60.createSprite(140, 60);
   img160x72.setColorDepth(16);
   img160x72.createSprite(160, 72);
+//  img240x240.setColorDepth(16);
+//  img240x240.createSprite(240, 240);
 
   oled1.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   oled2.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -1401,13 +1408,14 @@ void setup() {
   eyes.shape(SHAPE_NORMAL);
   eyes.mode(EYE_IDLE);
 
-  drawView0(0, 0, 0, 0);
-  drawView1(0, 0, 0, 0, 0, 0);
+  //drawScreen();
+//  drawView(&tft0, 0, 0, view0, p_view0);
+//  drawView(&tft1, 0, 0, view1, p_view1);
 
-  DPRINTLN("LCD Initialized");
+  DPRINTLN("Draw screen.");
 
-  String msg = "Initializing";
-  messageBox(&img160x72, 40, 100, msg);
+  messageBox(&img160x72, 40, 84, "Waiting for", &tft1);
+  messageBox(&img160x72, 40, 84, "init sequence.", &tft0);
 
   // a4:cf:12:6e:3a:f2 -> fakeTPMS
   NimBLEAddress tpms_fake_addr("A4:CF:12:6E:3A:F2", 0);
@@ -1437,12 +1445,14 @@ void setup() {
   pBLEScan->setMaxResults(
       0);  // do not store the scan results, use callback only.
 
-  attachInterrupt(PIN_TOUCH, handleTouch, RISING);
+//  attachInterrupt(PIN_TOUCH, handleTouch, RISING);
+//  attachInterrupt(PIN_TOUCH, handleTouchStart, RISING);
+//  attachInterrupt(PIN_TOUCH, handleTouchEnd, FALLING);
 }
 
 void loop() {
-  bool valid_data = false;
-  static float temp, humid, press, co2, temp0, temp1, temp2;
+  static bool valid_data = false;
+//  static float temp, humid, press, co2, temp0, temp1, temp2;
   static uint32_t prev_millis = 0;
   static uint32_t face_millis = 0;
   static int prev_move_z = 0, prev_move_y = 0;
@@ -1493,52 +1503,75 @@ void loop() {
       co2_hist_p %= SENSOR_HIST;
     }
     seq++;
-  }
 
-  if (btnint) {
-    DPRINTLN("touched");
-    btnint = 0;
-    changeFace(FACE_GOOD);
-    eyes.mode(EYE_BLINK);
-    face_millis = millis();
-    if (stable) {
-      view++;
-      view %= NUM_OF_VIEWS;
-      prefs.putUShort("view", view);
-      tft1.fillScreen(TFT_BLACK);
-      drawScreen(temp, humid, press, co2);
-      p_view = view;
-    }
-  }
-
-  if (!stable) {
-    // drawScreen(0, 0, 0, 0);
-    String msg = "Waiting data.";
-    for (int i = 0; i < (seq > 3 ? 3 : seq); i++) {
-      msg += ".";
-    }
-
-    messageBox(&img160x72, 40, 100, msg);
-    //      eyes.color(LEDCOLOR_MAGENTA);
-    changeFace(FACE_NODATA);
-  } else if (valid_data) {
-    drawScreen(temp, humid, press, co2);
-    // if (temp < 30 && temp > 20 && co2 < 800 && humid > 30) {
-    //         eyes.color(LEDCOLOR_GREEN);
-    //  changeFace(FACE_GOOD);
-    //} else
-    // if (co2 > 1200) {
-    //        eyes.color(LEDCOLOR_RED);
-    // changeFace(FACE_DIRTY);
-    //} else
-    if (press < 990 || temp > 35 || co2 > 1200) {
-      //        eyes.color(LEDCOLOR_BLUE);
-      changeFace(FACE_GURUGURU);
+    if (!valid_data) {
+      String msg = "Sensor failed.";
+      messageBox(&img160x72, 40, 82, msg, &tft1);
+      changeFace(FACE_NODATA);
     } else {
-      //        eyes.color(LEDCOLOR_CYAN);
-      changeFace(FACE_NORMAL);
+      drawScreen();
+      if (press < 990 || temp > 35 || co2 > 2000) {
+        changeFace(FACE_GURUGURU);
+      } else {
+        changeFace(FACE_NORMAL);
+      }
     }
   }
+
+  touched = digitalRead(PIN_TOUCH);
+  if (touched) { // 指を置いた
+    if (touch_start ==0) {
+      touch_start = millis();
+    } else {
+      touch_duration = millis() - touch_start;
+      if (touch_duration > LONG_PRESS_DURATION) {
+        //長押し
+      }
+    }
+  } else { // 指を放した
+    if (touch_start) {
+      touch_duration = millis() - touch_start;
+      if (touch_duration <= LONG_PRESS_DURATION) {
+        // 長押しじゃない
+        DPRINTLN("Short pressed.");
+        changeFace(FACE_GOOD);
+        eyes.mode(EYE_BLINK);
+        face_millis = millis();
+        if (stable) {
+          view1++;
+          view1 %= NUM_OF_VIEWS;
+          if (view1 == view0) {
+            view1++;
+            view1 %= NUM_OF_VIEWS;
+          }
+          prefs.putUShort("view1", view1);
+          tft1.fillScreen(TFT_BLACK);
+          drawScreen();
+          p_view1 = view1;
+        }
+      } else {
+        // 長押しだった
+        DPRINTLN("Long pressed.");
+        changeFace(FACE_GOOD);
+        eyes.mode(EYE_BLINK);
+        face_millis = millis();
+        if (stable) {
+          view0++;
+          view0 %= NUM_OF_VIEWS;
+          if (view0 == view1) {
+            view0++;
+            view0 %= NUM_OF_VIEWS;
+          }
+          prefs.putUShort("view0", view0);
+          tft0.fillScreen(TFT_BLACK);
+          drawScreen();
+          p_view0 = view0;
+        }
+      }
+    }
+    touch_start = 0;
+  }
+//    btnint = 0;
 
   if (use_accel && accel.available()) {  // Wait for new data from accelerometer
     // Acceleration of x, y, and z directions in g units
