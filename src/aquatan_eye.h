@@ -8,8 +8,8 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET    -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 
-#define EYE_HEIGHT   16
-#define EYE_WIDTH    48
+#define EYE_HEIGHT   24
+#define EYE_WIDTH    64
 
 #define BLINK_FRAME  4
 #define MOVE_FRAME  4

@@ -281,7 +281,7 @@ static LGFX_Sprite img140x60;
 static LGFX_Sprite img160x72;
 //static LGFX_Sprite img240x240;
 Adafruit_SSD1306 oled1(64, 32, &Wire, -1);
-Adafruit_SSD1306 oled2(64, 32, &Wire1, -1);
+Adafruit_SSD1306 oled2(64, 32, &Wire1, -1); 
 
 MMA8452Q accel;  // create instance of the MMA8452 class
 
@@ -291,8 +291,8 @@ float prev_tpress[4] = {0};
 
 Preferences prefs;
 
-AquatanEye eye_left(&oled1);
-AquatanEye eye_right(&oled2);
+AquatanEye eye_left(&oled2);
+AquatanEye eye_right(&oled1);
 AquatanEyes eyes(&eye_left, &eye_right);
 
 float temp, humid, press, co2, temp0, temp1, temp2;
@@ -1271,13 +1271,13 @@ void drawView(LGFX_Device *tft, int x, int y, int v, int pv) {
         int(tpms[3].pressure() / 10) != int(prev_tpress[3] / 10)) {
       tft->fillScreen(TFT_BLACK);
       drawBmp(tft, (unsigned char *)icons[4], 120 - 32, 120 - 32, 64, 64);
-      tpmsViewLeftUp(&img120x120[0], x, y, &(tpms[0]), tft);
-      tpmsViewLeftDown(&img120x120[1], x, y + 120, &(tpms[2]), tft);
-      tpmsViewRightUp(&img120x120[0], x + 120, y, &(tpms[1]), tft);
-      tpmsViewRightDown(&img120x120[1], x + 120, y + 120, &(tpms[3]), tft);
+      tpmsViewLeftUp(&(img120x120[0]), x, y, &(tpms[0]), tft);
       tpmsValueBox(&img140x60, x + 5, y + 60, &(tpms[0]), tft);
+      tpmsViewLeftDown(&(img120x120[1]), x, y + 120, &(tpms[2]), tft);
       tpmsValueBox(&img140x60, x + 5, y + 120 + 15, &(tpms[2]), tft);
+      tpmsViewRightUp(&(img120x120[0]), x + 120, y, &(tpms[1]), tft);
       tpmsValueBox(&img140x60, x + 120 - 35, y + 60, &(tpms[1]), tft);
+      tpmsViewRightDown(&(img120x120[1]), x + 120, y + 120, &(tpms[3]), tft);
       tpmsValueBox(&img140x60, x + 120 - 35, y + 120 + 15, &(tpms[3]), tft);
       prev_tpress[0] = tpms[0].pressure();
       prev_tpress[1] = tpms[1].pressure();
@@ -1312,6 +1312,20 @@ void changeFace(int face) {
   }
 }
 
+/*
+                                                       
+                                                      
+                       ,d                             
+                       88                             
+,adPPYba,  ,adPPYba, MM88MMM 88       88 8b,dPPYba,   
+I8[    "" a8P_____88   88    88       88 88P'    "8a  
+ `"Y8ba,  8PP"""""""   88    88       88 88       d8  
+aa    ]8I "8b,   ,aa   88,   "8a,   ,a88 88b,   ,a8"  
+`"YbbdP"'  `"Ybbd8"'   "Y888  `"YbbdP'Y8 88`YbbdP"'   
+                                         88           
+                                         88           
+
+ */
 void setup() {
   tpms[0].tire_id(TIRE_FL);
   tpms[1].tire_id(TIRE_FR);
@@ -1406,7 +1420,7 @@ void setup() {
   img120x120[0].createSprite(120, 120);
   img120x120[1].setColorDepth(16);
   img120x120[1].createSprite(120, 120);
-  img140x60.setColorDepth(8);
+  img140x60.setColorDepth(16);
   img140x60.createSprite(140, 60);
   img160x72.setColorDepth(16);
   img160x72.createSprite(160, 72);
@@ -1419,10 +1433,10 @@ void setup() {
 
   oled1.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   oled2.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  oled1.setRotation(0);
+  oled1.setRotation(2);
   oled1.clearDisplay();
   oled1.setTextColor(SSD1306_WHITE);
-  oled2.setRotation(2);
+  oled2.setRotation(0);
   oled2.clearDisplay();
   oled2.setTextColor(SSD1306_WHITE);
   //  oled.print("Hello, world");
@@ -1475,6 +1489,20 @@ void setup() {
 //  attachInterrupt(PIN_TOUCH, handleTouchEnd, FALLING);
 }
 
+/*
+                                         
+88                                      
+88                                      
+88                                      
+88  ,adPPYba,   ,adPPYba,  8b,dPPYba,   
+88 a8"     "8a a8"     "8a 88P'    "8a  
+88 8b       d8 8b       d8 88       d8  
+88 "8a,   ,a8" "8a,   ,a8" 88b,   ,a8"  
+88  `"YbbdP"'   `"YbbdP"'  88`YbbdP"'   
+                           88           
+                           88           
+
+ */
 void loop() {
   static bool valid_data = false;
 //  static float temp, humid, press, co2, temp0, temp1, temp2;
@@ -1536,8 +1564,10 @@ void loop() {
       changeFace(FACE_NODATA);
     } else {
       drawScreen();
-      if (press < 990 || temp > 35 || co2 > 2000) {
+      if (press < 990 || temp > 35 ) {
         changeFace(FACE_GURUGURU);
+      } else if (co2 > 1500) {
+        changeFace(FACE_DIRTY);
       } else {
         changeFace(FACE_NORMAL);
       }
@@ -1551,14 +1581,14 @@ void loop() {
     } else {
       touch_duration = millis() - touch_start;
       if (touch_duration > LONG_PRESS_DURATION) {
-        //長押し
+        //長押し中の処理
       }
     }
   } else { // 指を放した
     if (touch_start) {
       touch_duration = millis() - touch_start;
       if (touch_duration <= LONG_PRESS_DURATION) {
-        // 長押しじゃない
+        // 長押しじゃない → 左ディスプレイを進める
         DPRINTLN("Short pressed.");
         changeFace(FACE_GOOD);
         eyes.mode(EYE_BLINK);
@@ -1576,7 +1606,7 @@ void loop() {
           p_view1 = view1;
         }
       } else {
-        // 長押しだった
+        // 長押しだった → 右ディスプレイを進める
         DPRINTLN("Long pressed.");
         changeFace(FACE_GOOD);
         eyes.mode(EYE_BLINK);
