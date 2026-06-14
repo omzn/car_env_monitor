@@ -247,6 +247,7 @@
                      ? img->color888(0, 31, 31)        \
                      : img->color888(31, 215 - 54 - 54 - 54 - 27, 0))))
 
+#define TEMP_DIFF (-1.8)
 #define SENSOR_HIST (90)
 #define NUM_OF_VIEWS (5)
 
@@ -1538,7 +1539,7 @@ void loop() {
 //      stable = 0;
 //    }
     DPRINTF(">>> t0: %.1f, t1: %.1f, t2: %.1f, h: %.1f, p: %.1f c: %.1f\n", temp0, temp1, temp2, humid, press, co2);
-    temp = temp1;
+    temp = temp1 + TEMP_DIFF;
 
     if (humid == 0 || press < 850 || co2 == 0 || co2 > 7000) {
       valid_data = false;
